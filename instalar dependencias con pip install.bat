@@ -29,6 +29,11 @@ pip install nbconvert
 pip install importlib-metadata
 pip install jsonschema
 pip install branca
+pip3.9 install GDAL-3.3.3-cp39-cp39-win_amd64.whl
+pip3.9 install Fiona-1.8.20-cp39-cp39-win_amd64.whl
+pip3.9 install geopandas-0.10.2-py2.py3-none-any.whl
+
+pip install git+git://github.com/geopandas/geopandas.git
 
 echo END
 PAUSE
