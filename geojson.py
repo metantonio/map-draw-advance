@@ -7,7 +7,7 @@ def geojsonread(mapName):
     counties_gdf = geopandas.read_file('./venezuela/curvas_nivel/Venezuela_Curvas_Nivel.shp')
     counties_gdf.head()
     print(counties_gdf.head())
-    return folium.GeoJson(data=counties_gdf["geometry"], name='COTA_MTS', tooltip=folium.features.GeoJsonTooltip(fields=['COTA_MTS', 'geometry'], localize=True)).add_to(mapName)
+    return folium.GeoJson(data=counties_gdf["geometry"], name='COTA_MTS', localize=True)).add_to(mapName)
     #map
 map = folium.Map()
 geojsonread(map)
