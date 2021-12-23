@@ -1,8 +1,8 @@
 # ignore all files starting with .
 .*
+MapaCurvas.html
+*.html
 
-Mapa.html
-.html
 # Track .env example
 !.env.example
 !.gitignore
