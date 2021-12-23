@@ -2,7 +2,7 @@
 .*
 
 Mapa.html
-
+.html
 # Track .env example
 !.env.example
 !.gitignore
