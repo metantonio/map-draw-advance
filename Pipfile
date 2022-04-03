@@ -28,4 +28,4 @@ geopandas = {path = "./geopandas-0.10.2-py2.py3-none-any.whl"}
 pyinstaller = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "*"

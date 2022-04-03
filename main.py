@@ -227,7 +227,7 @@ def menuPpal(user):
             #HeatMap(heatMapData, name="Radiacion Externa", gradient={0.0: 'pink', 0.15: 'blue', 0.3: 'green',  0.7: 'yellow', 1: 'red'}, blur=5, radius=25, min_opacity=0.0).add_to(myMap)
             #HeatMap([[norte_GMSP[0], este_GMSP[0], 1]], name="Radiacion Centro", gradient={0.0: 'pink', 0.15: 'blue', 0.3: 'green',  0.7: 'yellow', 1: 'red'}, blur=1, radius=30, min_opacity=1.0).add_to(myMap)
             #HeatMap(dataHeatMap, name="Radiacion Interna", gradient={0.0: 'pink', 0.15: 'blue', 0.3: 'green',  0.7: 'yellow', 1: 'red'}, blur=1, radius=35, max_zoom=25).add_to(myMap)
-            HeatMapWithTime([dataHeatMap], name="Radiacion E.M.", gradient={0.0: 'pink', 0.2: 'blue', 0.4: 'green',  0.7: 'yellow', 1: 'red'}, radius=50, display_index=False, min_opacity=0.4, max_opacity=0.6, position='topright').add_to(myMap)
+            HeatMapWithTime([dataHeatMap], name="Radiacion E.M.", gradient={0.0: 'pink', 0.17: 'blue', 0.59: 'blue',0.6: 'yellow',  0.73: 'yellow',0.74: 'red', 1: 'red'}, radius=50, display_index=True, min_opacity=0.3, max_opacity=0.5, position='topright').add_to(myMap)
             #legend_img = './escala-color.jpg'
             #imageScale=FloatImage(legend_img, bottom=0, left=20)
             #imageScale.layer_name="Escala de Color"

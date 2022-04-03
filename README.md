@@ -14,7 +14,7 @@ Descargar los archivos en una misma carpeta.
 
 ## Qué se necesita si soy usuario de Windows?
 
-Se necesita tener instalado Python 3.9 (preferiblemente), el cual puede descargarse desde la tienda oficial de Microsoft de forma gratuita.
+Se necesita tener instalado Python 3.10 (preferiblemente), el cual puede descargarse desde la tienda oficial de Microsoft de forma gratuita.
 
 - [Python 3.9](https://www.microsoft.com/store/productId/9P7QFQMJRFP7)
 

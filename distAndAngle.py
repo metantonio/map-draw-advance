@@ -36,12 +36,14 @@ def distanceAndAngleInterpolation(latitude, longitude, angulo, distance, heat):
         heat=1
     diferencia=1-heat
     lista=[]
-    particion=5
+    lista2=[]
+    particion=1
     #print("###CONTROL HEAT###: ", heat)
     for i in range(particion+1):
         
         d=i*distance/(particion) #Distance in km
         heatInterpo=1-(diferencia*i/(particion))
+        #heatInterpo = heat
         if (heatInterpo==0):
             heatInterpo=0.001            
         #print("HEAT INTERPOLATION: ",heatInterpo)
@@ -57,11 +59,37 @@ def distanceAndAngleInterpolation(latitude, longitude, angulo, distance, heat):
 
         lat2 = math.degrees(lat2)
         lon2 = math.degrees(lon2)
-        lista.append([lat2, lon2, heatInterpo])
+        lista.append([lat2, lon2, heatInterpo, angulo, distance])
+        lista2=sorted(lista, key=lambda x:(x[3], x[4]))
+        
+    #print("lista ordenada: ", lista2)
+    for j in range(len(lista2)):
+        if(lista2[j][3]==lista2[j+1][3]):
+            diferencia = lista2[j][3]- lista2[j+1][3]
+            diferenciaDist = lista2[j+1][4]- lista2[j][4]
+            particion = 8
+            for k in range(particion+1):
+                d=k*diferenciaDist/(particion) #Distance in km
+                heatInterpo=lista2[j][2]-(diferencia*k/(particion))
+                if (heatInterpo==0):
+                    heatInterpo=0.001
+                
+                brng = math.radians(lista2[j][3])
+                lat1 = math.radians(lista2[j][0]) #Current lat point converted to radians
+                lon1 = math.radians(lista2[j][1]) #Current long point converted to radians
+                lat2 = math.asin( math.sin(lat1)*math.cos(d/R) +
+                math.cos(lat1)*math.sin(d/R)*math.cos(brng))
 
+                lon2 = lon1 + math.atan2(math.sin(brng)*math.sin(d/R)*math.cos(lat1),
+                     math.cos(d/R)-math.sin(lat1)*math.sin(lat2))
+
+                lat2 = math.degrees(lat2)
+                lon2 = math.degrees(lon2)
+                lista2.append([lat2, lon2, heatInterpo, lista2[j][3], diferenciaDist])
+            
     #print(lat2)
     #print(lon2)   
-    return lista
+    return lista2
 
 #print("New Coord: ", distanceAndAngle(10,-66,10,15))
 #print("distance(km): ",distance2points(10,-66,10.132699331976822,-65.97623066728403))
