@@ -66,44 +66,44 @@ def heatMap(norteLista, esteLista, heatmapLista):
 
 
 def menuPpal(user):
-    if (user==1):    
-        data, norte_GMS, este_GMS, coordenadas, colorM, tipoIcon, direccion, sobrenombre = excel_Localizacion()
-        #print(norte_GMS, este_GMS)
-
-        #Creando Mapa
-        myMap = folium.Map(location = coordenadas[0], zoom_start = 18, tiles='Stamen Terrain', control_scale=True)
-
-        #Agregando marcas de posición a las coordenadas
-        for i in range(len(coordenadas)):
-            folium.Marker(coordenadas[i], icon = folium.Icon(color=colorM[i]), popup = (str(i)+"\n N:"+str(coordenadas[i][0])+"\n E:"+str(coordenadas[i][1]))).add_to((myMap))
-
-        
-        
-    if (user==2):    
-        data, norte_GMSL, este_GMSL, coordenadasL = excel_Linea()
-        #print(norte_GMS, este_GMS)
-
-        #Creando Mapa
-        myMap = folium.Map(location = coordenadasL[0], zoom_start = 10, tiles='Stamen Terrain', control_scale=True)
-
-        #Agregando líneas entre coordenadas
-        dist=[]
-        for i in range(len(este_GMSL)-1):
-            #print(i)
-            dist.append(mpu.haversine_distance((norte_GMSL[int(i)], este_GMSL[int(i)]), (norte_GMSL[int(i)+1], este_GMSL[int(i)+1])))
-        print("\n distancias entre vértices de la polilínea (km): ",dist)
-        folium.PolyLine(coordenadasL, color="red", weight=2.5, opacity=1, popup="Distancias entre vértices en kilómetros: \n"+str(dist)).add_to(myMap)
-
-    if (user==3):    
-        data, norte_GMS, este_GMS, coordenadasC, radio = excel_Circulo()
-        #print(norte_GMS, este_GMS)
-
-        #Creando Mapa
-        myMap = folium.Map(location = coordenadasC[0], zoom_start = 10, tiles='Stamen Terrain', control_scale=True)
-
-        #Agregando círculos en las coordenadas
-        for i in range(len(coordenadasC)):
-            folium.Circle(coordenadasC[i], radius=radio[i], popup = (str(i)+"\n Centro es: \n N:"+str(coordenadasC[i][0])+"\n E:"+str(coordenadasC[i][1])+"\n Radio(m):"+str(radio[i])), line_color='#3186cc',fill_color='#3186cc', fill=True).add_to((myMap))
+##    if (user==1):    
+##        data, norte_GMS, este_GMS, coordenadas, colorM, tipoIcon, direccion, sobrenombre = excel_Localizacion()
+##        #print(norte_GMS, este_GMS)
+##
+##        #Creando Mapa
+##        myMap = folium.Map(location = coordenadas[0], zoom_start = 18, tiles='Stamen Terrain', control_scale=True)
+##
+##        #Agregando marcas de posición a las coordenadas
+##        for i in range(len(coordenadas)):
+##            folium.Marker(coordenadas[i], icon = folium.Icon(color=colorM[i]), popup = (str(i)+"\n N:"+str(coordenadas[i][0])+"\n E:"+str(coordenadas[i][1]))).add_to((myMap))
+##
+##        
+##        
+##    if (user==2):    
+##        data, norte_GMSL, este_GMSL, coordenadasL = excel_Linea()
+##        #print(norte_GMS, este_GMS)
+##
+##        #Creando Mapa
+##        myMap = folium.Map(location = coordenadasL[0], zoom_start = 10, tiles='Stamen Terrain', control_scale=True)
+##
+##        #Agregando líneas entre coordenadas
+##        dist=[]
+##        for i in range(len(este_GMSL)-1):
+##            #print(i)
+##            dist.append(mpu.haversine_distance((norte_GMSL[int(i)], este_GMSL[int(i)]), (norte_GMSL[int(i)+1], este_GMSL[int(i)+1])))
+##        print("\n distancias entre vértices de la polilínea (km): ",dist)
+##        folium.PolyLine(coordenadasL, color="red", weight=2.5, opacity=1, popup="Distancias entre vértices en kilómetros: \n"+str(dist)).add_to(myMap)
+##
+##    if (user==3):    
+##        data, norte_GMS, este_GMS, coordenadasC, radio = excel_Circulo()
+##        #print(norte_GMS, este_GMS)
+##
+##        #Creando Mapa
+##        myMap = folium.Map(location = coordenadasC[0], zoom_start = 10, tiles='Stamen Terrain', control_scale=True)
+##
+##        #Agregando círculos en las coordenadas
+##        for i in range(len(coordenadasC)):
+##            folium.Circle(coordenadasC[i], radius=radio[i], popup = (str(i)+"\n Centro es: \n N:"+str(coordenadasC[i][0])+"\n E:"+str(coordenadasC[i][1])+"\n Radio(m):"+str(radio[i])), line_color='#3186cc',fill_color='#3186cc', fill=True).add_to((myMap))
 
     if(user==4):
         data, norte_GMS, este_GMS, coordenadas, colorM, tipoIcon, direccion, sobrenombre = excel_Localizacion()
@@ -179,8 +179,11 @@ def menuPpal(user):
             for i in range(len(coordenadas)):
                 icon2=folium.Icon(color=colorM[i])
                 if tipoIcon[i]!="Default":
-                    icon2 = folium.features.CustomIcon(direccion[i], icon_size=(200, 200))                
-                folium.Marker(coordenadas[i], icon = icon2, popup = (str(i)+"\n N:"+str(coordenadas[i][0])+"\n E:"+str(coordenadas[i][1]))).add_to((myMap))
+                    icon2 = folium.features.CustomIcon(direccion[i], icon_size=(200, 200))
+                text_nombre=i
+                if isinstance(sobrenombre[i], str):
+                    text_nombre=sobrenombre[i]
+                folium.Marker(coordenadas[i], icon = icon2, popup = (str(text_nombre)+"\n N:"+str(coordenadas[i][0])+"\n E:"+str(coordenadas[i][1]))).add_to((myMap))
 
         #Agregando marcas de posición a las coordenadas de la hoja de Punto_Ang_distancia
         print("\n Dibujar marcadores de localización de los vértices del perímetro de radiación?? ")
@@ -388,9 +391,7 @@ if __name__ == '__main__':
 
     Menú:
 
-    1-. Dibujar Puntos de Localización
-    2-. Dibujar Polilínea
-    3-. Dibujar Círculos
+    
     4-. Dibujar Puntos de Localizacion, Polilíneas, Círculos, y P_DIST_ANG. Y transformar coordenadas a UTM
     5-. Transformar Coordenadas Grado a Coordenadas UTM
     6-. Salir
@@ -406,9 +407,7 @@ if __name__ == '__main__':
 
         Menú:
 
-        1-. Dibujar Puntos de Localización
-        2-. Dibujar Polilínea
-        3-. Dibujar Círculos
+        
         4-. Dibujar Puntos de Localizacion, Polilíneas, Círculos, y P_DIST_ANG. Y transformar coordenadas a UTM
         5-. Transformar Coordenadas Grado a Coordenadas UTM
         6-. Salir
