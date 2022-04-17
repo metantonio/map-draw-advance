@@ -6,3 +6,5 @@ MapaCurvas.html
 # Track .env example
 !.env.example
 !.gitignore
+
+node_modules/

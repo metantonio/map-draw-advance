@@ -32,6 +32,8 @@ pip install branca
 pip install GDAL-3.4.2-cp310-cp310-win_amd64.whl
 pip install Fiona-1.8.21-cp310-cp310-win_amd64.whl
 pip install geopandas-0.10.2-py2.py3-none-any.whl
+pip install flask
+
 
 echo END
 PAUSE
