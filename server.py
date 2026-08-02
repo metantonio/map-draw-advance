@@ -7,7 +7,7 @@ import threading
 from flask import Flask, render_template, request, jsonify, send_file, make_response
 import pandas as pd
 
-from functions import find_excel_file, excel_Localizacion, excel_Linea, excel_Circulo, excel_PuntoDistAng
+from functions import find_excel_file
 from main import build_folium_map
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
@@ -91,7 +91,27 @@ def create_excel_template(output_path='plantilla_data.xlsx'):
 
     return output_path
 
+def get_col_val(df, row_idx, posibles_nombres, pos_default):
+    """
+    Busca el valor en una fila probando primero por nombres de columna o por índice posicional.
+    """
+    for nombre in posibles_nombres:
+        for col in df.columns:
+            if str(col).strip().upper() == str(nombre).strip().upper():
+                val = df.iloc[row_idx][col]
+                if pd.notna(val):
+                    return val
+
+    if df.shape[1] > pos_default:
+        val = df.iloc[row_idx, pos_default]
+        if pd.notna(val):
+            return val
+    return None
+
 def parse_excel_to_json(filepath):
+    """
+    Lee un archivo Excel de forma 100% robusta tolerando pestañas vacías o columnas faltantes.
+    """
     result = {
         'localizacion': [],
         'linea': [],
@@ -102,70 +122,97 @@ def parse_excel_to_json(filepath):
     if not os.path.exists(filepath):
         return result
 
-    # 1. LOCALIZACION
     try:
-        df_loc = pd.read_excel(filepath, sheet_name="LOCALIZACION")
-        for i in range(len(df_loc)):
-            try:
-                n = float(df_loc.iloc[i, 6])
-                e = float(df_loc.iloc[i, 11])
-                if pd.notna(n) and pd.notna(e) and (abs(n) > 0.0001 or abs(e) > 0.0001):
-                    color = str(df_loc.iloc[i, 12]) if df_loc.shape[1] > 12 and pd.notna(df_loc.iloc[i, 12]) else 'blue'
-                    tipo = str(df_loc.iloc[i, 13]) if df_loc.shape[1] > 13 and pd.notna(df_loc.iloc[i, 13]) else 'Default'
-                    dir_icon = str(df_loc.iloc[i, 14]) if df_loc.shape[1] > 14 and pd.notna(df_loc.iloc[i, 14]) else ''
-                    sobrenom = str(df_loc.iloc[i, 15]) if df_loc.shape[1] > 15 and pd.notna(df_loc.iloc[i, 15]) else f"Punto_{i+1}"
-                    result['localizacion'].append({
-                        'norte': n, 'este': e, 'color': color, 'tipo': tipo, 'direccion': dir_icon, 'sobrenombre': sobrenom
-                    })
-            except Exception:
-                continue
-    except Exception:
-        pass
+        xl = pd.ExcelFile(filepath)
+        sheet_names = [s.strip().upper() for s in xl.sheet_names]
+    except Exception as e:
+        print(f"[!] Error abriendo estructura Excel {filepath}: {e}")
+        return result
+
+    # 1. LOCALIZACION
+    loc_sheets = [s for s in xl.sheet_names if s.strip().upper() == 'LOCALIZACION']
+    if loc_sheets:
+        try:
+            df_loc = pd.read_excel(filepath, sheet_name=loc_sheets[0])
+            if not df_loc.empty:
+                for i in range(len(df_loc)):
+                    try:
+                        n_val = get_col_val(df_loc, i, ['NORTE_LATITUD', 'LATITUD', 'NORTE', 'LAT'], 6)
+                        e_val = get_col_val(df_loc, i, ['ESTE_LONGITUD', 'LONGITUD', 'ESTE', 'LON'], 11)
+                        if n_val is not None and e_val is not None:
+                            n, e = float(n_val), float(e_val)
+                            if (abs(n) > 0.0001 or abs(e) > 0.0001):
+                                color = str(get_col_val(df_loc, i, ['COLOR'], 12) or 'blue')
+                                tipo = str(get_col_val(df_loc, i, ['TIPO_ICONO', 'TIPO'], 13) or 'Default')
+                                dir_icon = str(get_col_val(df_loc, i, ['RUTA_ICONO', 'DIRECCION'], 14) or '')
+                                sobrenom = str(get_col_val(df_loc, i, ['SOBRENOMBRE', 'ETIQUETA'], 15) or f"Punto_{i+1}")
+                                result['localizacion'].append({
+                                    'norte': n, 'este': e, 'color': color, 'tipo': tipo, 'direccion': dir_icon, 'sobrenombre': sobrenom
+                                })
+                    except Exception:
+                        continue
+        except Exception as e:
+            print(f"[!] Aviso al procesar hoja LOCALIZACION: {e}")
 
     # 2. LINEA
-    try:
-        df_lin = pd.read_excel(filepath, sheet_name="LINEA")
-        for i in range(len(df_lin)):
-            try:
-                n = float(df_lin.iloc[i, 6])
-                e = float(df_lin.iloc[i, 11])
-                if pd.notna(n) and pd.notna(e) and (abs(n) > 0.0001 or abs(e) > 0.0001):
-                    result['linea'].append({'norte': n, 'este': e})
-            except Exception:
-                continue
-    except Exception:
-        pass
+    lin_sheets = [s for s in xl.sheet_names if s.strip().upper() == 'LINEA']
+    if lin_sheets:
+        try:
+            df_lin = pd.read_excel(filepath, sheet_name=lin_sheets[0])
+            if not df_lin.empty:
+                for i in range(len(df_lin)):
+                    try:
+                        n_val = get_col_val(df_lin, i, ['NORTE_LATITUD', 'LATITUD', 'NORTE', 'LAT'], 6)
+                        e_val = get_col_val(df_lin, i, ['ESTE_LONGITUD', 'LONGITUD', 'ESTE', 'LON'], 11)
+                        if n_val is not None and e_val is not None:
+                            n, e = float(n_val), float(e_val)
+                            if (abs(n) > 0.0001 or abs(e) > 0.0001):
+                                result['linea'].append({'norte': n, 'este': e})
+                    except Exception:
+                        continue
+        except Exception as e:
+            print(f"[!] Aviso al procesar hoja LINEA: {e}")
 
     # 3. CIRCULO
-    try:
-        df_cir = pd.read_excel(filepath, sheet_name="CIRCULO")
-        for i in range(len(df_cir)):
-            try:
-                n = float(df_cir.iloc[i, 6])
-                e = float(df_cir.iloc[i, 11])
-                if pd.notna(n) and pd.notna(e) and (abs(n) > 0.0001 or abs(e) > 0.0001):
-                    rad = float(df_cir.iloc[i, 12]) if df_cir.shape[1] > 12 and pd.notna(df_cir.iloc[i, 12]) else 100.0
-                    result['circulo'].append({'norte': n, 'este': e, 'radio': rad})
-            except Exception:
-                continue
-    except Exception:
-        pass
+    cir_sheets = [s for s in xl.sheet_names if s.strip().upper() == 'CIRCULO']
+    if cir_sheets:
+        try:
+            df_cir = pd.read_excel(filepath, sheet_name=cir_sheets[0])
+            if not df_cir.empty:
+                for i in range(len(df_cir)):
+                    try:
+                        n_val = get_col_val(df_cir, i, ['NORTE_LATITUD', 'LATITUD', 'NORTE', 'LAT'], 6)
+                        e_val = get_col_val(df_cir, i, ['ESTE_LONGITUD', 'LONGITUD', 'ESTE', 'LON'], 11)
+                        if n_val is not None and e_val is not None:
+                            n, e = float(n_val), float(e_val)
+                            if (abs(n) > 0.0001 or abs(e) > 0.0001):
+                                rad = float(get_col_val(df_cir, i, ['RADIO_METROS', 'RADIO'], 12) or 100.0)
+                                result['circulo'].append({'norte': n, 'este': e, 'radio': rad})
+                    except Exception:
+                        continue
+        except Exception as e:
+            print(f"[!] Aviso al procesar hoja CIRCULO: {e}")
 
     # 4. P_ANG_DIST (RADIACION)
-    try:
-        df_rad = pd.read_excel(filepath, sheet_name="P_ANG_DIST")
-        for i in range(len(df_rad)):
-            try:
-                n = float(df_rad.iloc[i, 6])
-                e = float(df_rad.iloc[i, 11])
-                if pd.notna(n) and pd.notna(e) and (abs(n) > 0.0001 or abs(e) > 0.0001):
-                    ang = float(df_rad.iloc[i, 12]) if df_rad.shape[1] > 12 and pd.notna(df_rad.iloc[i, 12]) else 0.0
-                    dist = float(df_rad.iloc[i, 13]) if df_rad.shape[1] > 13 and pd.notna(df_rad.iloc[i, 13]) else 1.0
-                    result['radiacion'].append({'norte': n, 'este': e, 'angulo': ang, 'distancia': dist})
-            except Exception:
-                continue
-    except Exception:
-        pass
+    rad_sheets = [s for s in xl.sheet_names if s.strip().upper() in ['P_ANG_DIST', 'RADIACION']]
+    if rad_sheets:
+        try:
+            df_rad = pd.read_excel(filepath, sheet_name=rad_sheets[0])
+            if not df_rad.empty:
+                for i in range(len(df_rad)):
+                    try:
+                        n_val = get_col_val(df_rad, i, ['NORTE_LATITUD', 'LATITUD', 'NORTE', 'LAT'], 6)
+                        e_val = get_col_val(df_rad, i, ['ESTE_LONGITUD', 'LONGITUD', 'ESTE', 'LON'], 11)
+                        if n_val is not None and e_val is not None:
+                            n, e = float(n_val), float(e_val)
+                            if (abs(n) > 0.0001 or abs(e) > 0.0001):
+                                ang = float(get_col_val(df_rad, i, ['ANGULO_GIRO', 'ANGULO', 'ANG'], 12) or 0.0)
+                                dist = float(get_col_val(df_rad, i, ['DISTANCIA_KM', 'DISTANCIA', 'DIST'], 13) or 1.0)
+                                result['radiacion'].append({'norte': n, 'este': e, 'angulo': ang, 'distancia': dist})
+                    except Exception:
+                        continue
+        except Exception as e:
+            print(f"[!] Aviso al procesar hoja RADIACION: {e}")
 
     return result
 

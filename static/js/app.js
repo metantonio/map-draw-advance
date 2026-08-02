@@ -7,6 +7,7 @@ let currentData = {
 };
 
 let autoUpdateTimer = null;
+let loadingSafetyTimeout = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
@@ -119,27 +120,52 @@ function bindEvents() {
   document.getElementById('btnCloseCajetin').addEventListener('click', () => cajModal.style.display = 'none');
   document.getElementById('btnCancelCajetin').addEventListener('click', () => cajModal.style.display = 'none');
 
-  document.getElementById('btnConfirmPrintPDF').addEventListener('click', async () => {
+  // Confirmar Impresión de PDF actualizando el Cajetín en vivo SIN recargar el mapa
+  document.getElementById('btnConfirmPrintPDF').addEventListener('click', () => {
     cajModal.style.display = 'none';
     
-    // Recopilar información del Cajetín
-    const cajetin_info = {
-      titulo: document.getElementById('caj_titulo').value || 'MAP DRAW ADVANCE v2.0 — PLANO GEOESPACIAL',
-      proyecto: document.getElementById('caj_proyecto').value || 'Levantamiento de Coordenadas & Patrón de Radiación RF',
-      cliente: document.getElementById('caj_cliente').value || 'General',
-      autor: document.getElementById('caj_autor').value || 'Antonio Martínez (@metantonio)',
-      revisado: document.getElementById('caj_revisado').value || 'Ing. Coordinador',
-      fecha: document.getElementById('caj_fecha').value || new Date().toLocaleDateString(),
-      notas: document.getElementById('caj_notas').value || 'WGS-84 / UTM Transverse Mercator'
-    };
+    const caj_titulo = document.getElementById('caj_titulo').value || 'MAP DRAW ADVANCE v2.0 — PLANO GEOESPACIAL';
+    const caj_proyecto = document.getElementById('caj_proyecto').value || 'Levantamiento de Coordenadas & Patrón de Radiación RF';
+    const caj_cliente = document.getElementById('caj_cliente').value || 'General';
+    const caj_autor = document.getElementById('caj_autor').value || 'Antonio Martínez (@metantonio)';
+    const caj_revisado = document.getElementById('caj_revisado').value || 'Ing. Coordinador';
+    const caj_fecha = document.getElementById('caj_fecha').value || new Date().toLocaleDateString();
+    const caj_notas = document.getElementById('caj_notas').value || 'WGS-84 / UTM Transverse Mercator';
 
-    // Regenerar Mapa con la información del Cajetín
-    await generateMap(false, cajetin_info);
+    // Actualizar directamente el DOM del iFrame sin reiniciar Leaflet
+    const iframe = document.getElementById('mapFrame');
+    try {
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+      if (iframeDoc) {
+        const elTitulo = iframeDoc.getElementById('cj-hdr-titulo');
+        if (elTitulo) elTitulo.textContent = caj_titulo;
 
-    // Esperar un instante breve para que el iFrame cargue y luego imprimir
+        const elProyecto = iframeDoc.getElementById('cj-val-proyecto');
+        if (elProyecto) elProyecto.textContent = caj_proyecto;
+
+        const elCliente = iframeDoc.getElementById('cj-val-cliente');
+        if (elCliente) elCliente.textContent = caj_cliente;
+
+        const elAutor = iframeDoc.getElementById('cj-val-autor');
+        if (elAutor) elAutor.textContent = caj_autor;
+
+        const elRevisado = iframeDoc.getElementById('cj-val-revisado');
+        if (elRevisado) elRevisado.textContent = caj_revisado;
+
+        const elFecha = iframeDoc.getElementById('cj-val-fecha');
+        if (elFecha) elFecha.textContent = caj_fecha;
+
+        const elNotas = iframeDoc.getElementById('cj-val-notas');
+        if (elNotas) elNotas.textContent = caj_notas;
+      }
+    } catch(e) {
+      console.warn("No se pudo actualizar el DOM del Cajetín en iFrame:", e);
+    }
+
+    // Disparar la impresión inmediata conservando encuadre, zoom y capa activa
     setTimeout(() => {
       exportMapPDF();
-    }, 400);
+    }, 150);
   });
 
   // Modal de Créditos
@@ -171,11 +197,24 @@ function triggerAutoUpdateMap(silent = true) {
   }, 500);
 }
 
-// Mostrar / Ocultar Overlay de Carga (Loading Bar)
+// Mostrar / Ocultar Overlay de Carga (Loading Bar con temporizador de seguridad)
 function showLoading(show) {
   const overlay = document.getElementById('loadingOverlay');
-  if (overlay) {
-    overlay.style.display = show ? 'flex' : 'none';
+  if (!overlay) return;
+
+  if (loadingSafetyTimeout) {
+    clearTimeout(loadingSafetyTimeout);
+    loadingSafetyTimeout = null;
+  }
+
+  if (show) {
+    overlay.style.display = 'flex';
+    // Temporizador de seguridad máximo de 2 segundos para evitar que se quede pegado
+    loadingSafetyTimeout = setTimeout(() => {
+      overlay.style.display = 'none';
+    }, 2000);
+  } else {
+    overlay.style.display = 'none';
   }
 }
 
