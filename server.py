@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import traceback
 import webbrowser
 import threading
 from flask import Flask, render_template, request, jsonify, send_file, make_response
@@ -210,40 +211,49 @@ def api_load_data():
 
 @app.route('/api/upload-excel', methods=['POST'])
 def api_upload_excel():
-    if 'file' not in request.files:
-        return jsonify({'status': 'error', 'message': 'No se adjuntó archivo'}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'status': 'error', 'message': 'Nombre de archivo vacío'}), 400
+    try:
+        if 'file' not in request.files:
+            return jsonify({'status': 'error', 'message': 'No se adjuntó archivo'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'status': 'error', 'message': 'Nombre de archivo vacío'}), 400
 
-    filename = 'data.xlsx'
-    file.save(filename)
-    data = parse_excel_to_json(filename)
-    
-    build_folium_map(data['localizacion'], data['linea'], data['circulo'], data['radiacion'], grid_step=1.0)
+        filename = 'data.xlsx'
+        file.save(filename)
+        data = parse_excel_to_json(filename)
+        
+        grid_step = float(request.form.get('grid_step', 1.0))
+        build_folium_map(data['localizacion'], data['linea'], data['circulo'], data['radiacion'], grid_step=grid_step)
 
-    return jsonify({
-        'status': 'ok',
-        'message': 'Archivo subido y mapa actualizado correctamente',
-        'data': data,
-        'map_url': f'/Mapa.html?t={int(time.time())}'
-    })
+        return jsonify({
+            'status': 'ok',
+            'message': 'Archivo subido y mapa actualizado correctamente',
+            'data': data,
+            'map_url': f'/Mapa.html?t={int(time.time())}'
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/generate-map', methods=['POST'])
 def api_generate_map():
-    req = request.get_json(force=True)
-    localizacion = req.get('localizacion', [])
-    linea = req.get('linea', [])
-    circulo = req.get('circulo', [])
-    radiacion = req.get('radiacion', [])
-    grid_step = float(req.get('grid_step', 1.0))
+    try:
+        req = request.get_json(force=True) or {}
+        localizacion = req.get('localizacion', [])
+        linea = req.get('linea', [])
+        circulo = req.get('circulo', [])
+        radiacion = req.get('radiacion', [])
+        grid_step = float(req.get('grid_step', 1.0))
 
-    out_file = build_folium_map(localizacion, linea, circulo, radiacion, grid_step=grid_step, output_file='Mapa.html')
-    return jsonify({
-        'status': 'ok',
-        'message': 'Mapa generado exitosamente',
-        'map_url': f'/Mapa.html?t={int(time.time())}'
-    })
+        out_file = build_folium_map(localizacion, linea, circulo, radiacion, grid_step=grid_step, output_file='Mapa.html')
+        return jsonify({
+            'status': 'ok',
+            'message': 'Mapa generado exitosamente',
+            'map_url': f'/Mapa.html?t={int(time.time())}'
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/download-utm', methods=['GET'])
 def api_download_utm():

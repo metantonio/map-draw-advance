@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 import numpy as np
 import pandas as pd
 import folium
@@ -27,7 +28,7 @@ def formatoMouse(my_map):
 
 def agregar_grilla(group, grid_step=1.0, bounds=None):
     """
-    Genera una grilla de latitud y longitud con paso configurable (grid_step en grados decimales).
+    Genera una grilla de latitud y longitud visible, con líneas contrastadas y etiquetas de coordenadas.
     """
     try:
         step = float(grid_step) if float(grid_step) > 0 else 1.0
@@ -35,45 +36,56 @@ def agregar_grilla(group, grid_step=1.0, bounds=None):
         step = 1.0
 
     if bounds:
-        min_lat = max(-89.9, bounds[0][0] - step * 3)
-        max_lat = min(89.9, bounds[1][0] + step * 3)
-        min_lon = max(-179.9, bounds[0][1] - step * 3)
-        max_lon = min(179.9, bounds[1][1] + step * 3)
+        min_lat = max(-89.9, bounds[0][0] - step * 4)
+        max_lat = min(89.9, bounds[1][0] + step * 4)
+        min_lon = max(-179.9, bounds[0][1] - step * 4)
+        max_lon = min(179.9, bounds[1][1] + step * 4)
     else:
         min_lat, max_lat = -85.0, 85.0
         min_lon, max_lon = -180.0, 180.0
 
-    max_lines = 400
-    lat_steps = np.arange(min_lat, max_lat + step * 0.5, step)
-    lon_steps = np.arange(min_lon, max_lon + step * 0.5, step)
+    # Asegurar paso alineado a valores enteros de la grilla
+    start_lat = math.floor(min_lat / step) * step
+    end_lat = math.ceil(max_lat / step) * step
+    start_lon = math.floor(min_lon / step) * step
+    end_lon = math.ceil(max_lon / step) * step
 
+    lat_steps = np.arange(start_lat, end_lat + step * 0.5, step)
+    lon_steps = np.arange(start_lon, end_lon + step * 0.5, step)
+
+    max_lines = 300
     if len(lat_steps) > max_lines:
         lat_steps = lat_steps[::int(len(lat_steps)/max_lines) + 1]
     if len(lon_steps) > max_lines:
         lon_steps = lon_steps[::int(len(lon_steps)/max_lines) + 1]
 
+    # Líneas de Latitud (Horizontales)
     for lat in lat_steps:
+        lat_val = round(float(lat), 6)
         folium.PolyLine(
-            [[lat, min_lon], [lat, max_lon]],
-            weight=0.6,
-            color="#555555",
-            opacity=0.35,
-            tooltip=f"Lat {lat:.4f}º"
+            [[lat_val, start_lon], [lat_val, end_lon]],
+            weight=1.5,
+            color="#2563eb",
+            opacity=0.6,
+            dash_array="4, 4",
+            tooltip=f"Latitud: {lat_val:.4f}º"
         ).add_to(group)
 
+    # Líneas de Longitud (Verticales)
     for lon in lon_steps:
+        lon_val = round(float(lon), 6)
         folium.PolyLine(
-            [[min_lat, lon], [max_lat, lon]],
-            weight=0.6,
-            color="#555555",
-            opacity=0.35,
-            tooltip=f"Lon {lon:.4f}º"
+            [[start_lat, lon_val], [end_lat, lon_val]],
+            weight=1.5,
+            color="#2563eb",
+            opacity=0.6,
+            dash_array="4, 4",
+            tooltip=f"Longitud: {lon_val:.4f}º"
         ).add_to(group)
 
 def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion, grid_step=1.0, output_file='Mapa.html'):
     """
-    Construye y guarda el mapa Folium con filtrado seguro de coordenadas válidas para evitar zoom-out a mapa mundi,
-    y script de auto-ajuste de tamaño Leaflet para evitar recuadros grises.
+    Construye y guarda el mapa Folium con grilla dinámica claramente visible y adaptada.
     """
     all_coords = []
     default_location = [10.4806, -66.9036]
@@ -146,7 +158,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     except Exception as e:
         print(f"[!] No se pudo guardar resultsUTM.xlsx: {e}")
 
-    # Filtrar coordenadas válidas (excluyendo 0,0 por defecto de filas vacías)
+    # Filtrar coordenadas válidas
     valid_initial = [c for c in coordenadas if abs(c[0]) > 0.0001 and abs(c[1]) > 0.0001]
     if not valid_initial:
         valid_initial = [c for c in coordenadasL if abs(c[0]) > 0.0001 and abs(c[1]) > 0.0001]
@@ -314,7 +326,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
 
         leyenda(myMap)
 
-    # Determinar Encuadre / Bounds SOLO con coordenadas geográficas estrictamente válidas
+    # Determinar Encuadre / Bounds SOLO con coordenadas geográficas válidas
     bounds = None
     valid_coords = [c for c in all_coords if abs(c[0]) > 0.0001 and abs(c[1]) > 0.0001]
     if valid_coords:
@@ -328,7 +340,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
         bounds = [south_west, north_east]
         myMap.fit_bounds(bounds)
 
-    # Generar Grilla Dinámica
+    # Generar Grilla Dinámica con contraste mejorado
     agregar_grilla(fg_grilla, grid_step=grid_step, bounds=bounds)
 
     # Añadir FeatureGroups al mapa

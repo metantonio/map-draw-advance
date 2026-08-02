@@ -6,6 +6,8 @@ let currentData = {
   radiacion: []
 };
 
+let autoUpdateTimer = null;
+
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   loadInitialData();
@@ -39,7 +41,7 @@ async function loadInitialData() {
     renderAllTables();
     
     // Auto-generar mapa en el primer inicio
-    generateMap();
+    generateMap(true);
   } catch (err) {
     console.warn('No se pudieron cargar los datos iniciales:', err);
   }
@@ -80,8 +82,23 @@ function bindEvents() {
     }
   });
 
-  // Generar Mapa
-  document.getElementById('btnGenerateMap').addEventListener('click', generateMap);
+  // Cambio de Grilla -> Auto Actualizar
+  document.getElementById('gridStepSelect').addEventListener('change', () => {
+    triggerAutoUpdateMap(true);
+  });
+
+  // Escuchar edición en vivo en las tablas (delegación de eventos)
+  const editorPanel = document.querySelector('.editor-panel');
+  if (editorPanel) {
+    editorPanel.addEventListener('input', (e) => {
+      if (e.target.tagName === 'INPUT') {
+        triggerAutoUpdateMap(true);
+      }
+    });
+  }
+
+  // Generar Mapa Manual
+  document.getElementById('btnGenerateMap').addEventListener('click', () => generateMap(false));
 
   // Exportar PNG y PDF
   document.getElementById('btnExportPNG').addEventListener('click', exportMapPNG);
@@ -106,6 +123,14 @@ function bindEvents() {
   iframe.addEventListener('load', () => {
     showLoading(false);
   });
+}
+
+// Disparador de actualización automática con debounce (500ms)
+function triggerAutoUpdateMap(silent = true) {
+  if (autoUpdateTimer) clearTimeout(autoUpdateTimer);
+  autoUpdateTimer = setTimeout(() => {
+    generateMap(silent);
+  }, 500);
 }
 
 // Mostrar / Ocultar Overlay de Carga (Loading Bar)
@@ -276,7 +301,7 @@ function renderTableRad() {
   });
 }
 
-// Añadir Fila
+// Añadir Fila -> Auto Actualizar Mapa
 function addRow(tableId) {
   collectCurrentDataFromDOM();
   if (tableId === 'table-loc') {
@@ -293,14 +318,16 @@ function addRow(tableId) {
     currentData.radiacion.push({ norte: last.norte, este: last.este, angulo: 0, distancia: 1.0 });
   }
   renderAllTables();
+  triggerAutoUpdateMap(true);
 }
 
-// Eliminar Fila
+// Eliminar Fila -> Auto Actualizar Mapa
 function removeRow(type, index) {
   collectCurrentDataFromDOM();
   if (currentData[type]) {
     currentData[type].splice(index, 1);
     renderAllTables();
+    triggerAutoUpdateMap(true);
   }
 }
 
@@ -312,11 +339,14 @@ function reloadMapFrame(url) {
 }
 
 // Generar Mapa enviando datos al Backend
-async function generateMap() {
+async function generateMap(silent = false) {
   const btn = document.getElementById('btnGenerateMap');
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
-  showLoading(true);
+  
+  if (!silent) {
+    showLoading(true);
+  }
 
   // Recopilar valores más recientes del DOM
   collectCurrentDataFromDOM();
@@ -337,11 +367,11 @@ async function generateMap() {
       reloadMapFrame(json.map_url);
     } else {
       showLoading(false);
-      alert('⚠️ No se pudo generar el mapa: ' + json.message);
+      if (!silent) alert('⚠️ No se pudo generar el mapa: ' + json.message);
     }
   } catch (err) {
     showLoading(false);
-    alert('❌ Error de comunicación al generar el mapa: ' + err);
+    if (!silent) alert('❌ Error de comunicación al generar el mapa: ' + err);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Generar Mapa';
