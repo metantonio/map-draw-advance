@@ -61,6 +61,8 @@ function bindEvents() {
     showLoading(true);
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('grid_step', document.getElementById('gridStepSelect').value);
+    formData.append('show_perimeter_markers', document.getElementById('chkShowPerimeterMarkers').checked);
 
     try {
       const res = await fetch('/api/upload-excel', {
@@ -84,6 +86,11 @@ function bindEvents() {
 
   // Cambio de Grilla -> Auto Actualizar
   document.getElementById('gridStepSelect').addEventListener('change', () => {
+    triggerAutoUpdateMap(true);
+  });
+
+  // Toggle de Marcadores RF -> Auto Actualizar
+  document.getElementById('chkShowPerimeterMarkers').addEventListener('change', () => {
     triggerAutoUpdateMap(true);
   });
 
@@ -351,6 +358,7 @@ async function generateMap(silent = false) {
   // Recopilar valores más recientes del DOM
   collectCurrentDataFromDOM();
   const grid_step = document.getElementById('gridStepSelect').value;
+  const show_perimeter_markers = document.getElementById('chkShowPerimeterMarkers').checked;
 
   try {
     const res = await fetch('/api/generate-map', {
@@ -358,7 +366,8 @@ async function generateMap(silent = false) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...currentData,
-        grid_step: grid_step
+        grid_step: grid_step,
+        show_perimeter_markers: show_perimeter_markers
       })
     });
 

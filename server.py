@@ -175,9 +175,9 @@ def index():
         excel_file = find_excel_file()
         if excel_file:
             data = parse_excel_to_json(excel_file)
-            build_folium_map(data['localizacion'], data['linea'], data['circulo'], data['radiacion'], grid_step=1.0)
+            build_folium_map(data['localizacion'], data['linea'], data['circulo'], data['radiacion'], grid_step=1.0, show_perimeter_markers=False)
         else:
-            build_folium_map([], [], [], [], grid_step=1.0)
+            build_folium_map([], [], [], [], grid_step=1.0, show_perimeter_markers=False)
     return render_template('index.html')
 
 @app.route('/Mapa.html')
@@ -188,9 +188,9 @@ def get_map():
         excel_file = find_excel_file()
         if excel_file:
             data = parse_excel_to_json(excel_file)
-            build_folium_map(data['localizacion'], data['linea'], data['circulo'], data['radiacion'], grid_step=1.0)
+            build_folium_map(data['localizacion'], data['linea'], data['circulo'], data['radiacion'], grid_step=1.0, show_perimeter_markers=False)
         else:
-            build_folium_map([], [], [], [], grid_step=1.0)
+            build_folium_map([], [], [], [], grid_step=1.0, show_perimeter_markers=False)
     
     response = make_response(send_file(map_path))
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -223,7 +223,8 @@ def api_upload_excel():
         data = parse_excel_to_json(filename)
         
         grid_step = float(request.form.get('grid_step', 1.0))
-        build_folium_map(data['localizacion'], data['linea'], data['circulo'], data['radiacion'], grid_step=grid_step)
+        show_markers = str(request.form.get('show_perimeter_markers', 'false')).lower() == 'true'
+        build_folium_map(data['localizacion'], data['linea'], data['circulo'], data['radiacion'], grid_step=grid_step, show_perimeter_markers=show_markers)
 
         return jsonify({
             'status': 'ok',
@@ -244,8 +245,12 @@ def api_generate_map():
         circulo = req.get('circulo', [])
         radiacion = req.get('radiacion', [])
         grid_step = float(req.get('grid_step', 1.0))
+        show_markers = bool(req.get('show_perimeter_markers', False))
 
-        out_file = build_folium_map(localizacion, linea, circulo, radiacion, grid_step=grid_step, output_file='Mapa.html')
+        out_file = build_folium_map(
+            localizacion, linea, circulo, radiacion,
+            grid_step=grid_step, show_perimeter_markers=show_markers, output_file='Mapa.html'
+        )
         return jsonify({
             'status': 'ok',
             'message': 'Mapa generado exitosamente',

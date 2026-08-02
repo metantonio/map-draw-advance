@@ -81,6 +81,24 @@ body {
   color: var(--text-muted);
 }
 
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-main);
+  cursor: pointer;
+  background: var(--bg-card);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  user-select: none;
+}
+
+.checkbox-label input {
+  cursor: pointer;
+}
+
 .form-select {
   background-color: var(--bg-card);
   color: var(--text-main);

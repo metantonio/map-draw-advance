@@ -83,9 +83,9 @@ def agregar_grilla(group, grid_step=1.0, bounds=None):
             tooltip=f"Longitud: {lon_val:.4f}º"
         ).add_to(group)
 
-def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion, grid_step=1.0, output_file='Mapa.html'):
+def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion, grid_step=1.0, show_perimeter_markers=False, output_file='Mapa.html'):
     """
-    Construye y guarda el mapa Folium con grilla dinámica claramente visible y adaptada.
+    Construye y guarda el mapa Folium con marcadores de perímetro opcionales e independientes de la curva de radiación.
     """
     all_coords = []
     default_location = [10.4806, -66.9036]
@@ -211,7 +211,8 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     fg_localizacion = folium.FeatureGroup(name="📍 Puntos de Localización")
     fg_lineas = folium.FeatureGroup(name="📏 Polilíneas")
     fg_circulos = folium.FeatureGroup(name="⭕ Círculos")
-    fg_perimetro = folium.FeatureGroup(name="🚩 Perímetro de Radiación (Curvas Suaves)")
+    fg_perimetro = folium.FeatureGroup(name="🚩 Perímetro RF (Curva Suave)", show=True)
+    fg_perimetro_marcadores = folium.FeatureGroup(name="📌 Vértices Perímetro RF (Marcadores)", show=show_perimeter_markers)
     fg_heatmap = folium.FeatureGroup(name="🔥 Patrón de Radiación (Heatmap RF)")
     fg_grilla = folium.FeatureGroup(name=f"🌐 Grilla Lat/Lon ({grid_step}º)", show=True)
 
@@ -247,7 +248,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
                     tooltip=f"<b>{nombre}</b>"
                 ).add_to(fg_localizacion)
 
-    # 2. Marcadores del perímetro de radiación
+    # 2. Marcadores del perímetro de radiación (Capa Independiente Opcional)
     if norte_GMSP2:
         for i in range(len(norte_GMSP2)):
             coord = [norte_GMSP2[i], este_GMSP2[i]]
@@ -258,7 +259,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
                     icon=folium.Icon(color='red', icon='crosshairs', prefix='fa'),
                     popup=f"Vértice Radiación #{i+1}<br>N: {coord[0]:.6f}º<br>E: {coord[1]:.6f}º<br>Atenuación RF: 0%",
                     tooltip=f"Perímetro RF #{i+1} (0%)"
-                ).add_to(fg_perimetro)
+                ).add_to(fg_perimetro_marcadores)
 
     # 3. Polilíneas
     valid_L = [c for c in coordenadasL if abs(c[0]) > 0.0001 and abs(c[1]) > 0.0001]
@@ -348,6 +349,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     fg_lineas.add_to(myMap)
     fg_circulos.add_to(myMap)
     fg_perimetro.add_to(myMap)
+    fg_perimetro_marcadores.add_to(myMap)
     fg_heatmap.add_to(myMap)
     fg_grilla.add_to(myMap)
 
@@ -384,7 +386,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     # Guardar mapa en ruta absoluta
     abs_output = os.path.abspath(output_file)
     myMap.save(abs_output)
-    print(f" [OK] Mapa generado exitosamente en: {abs_output} (Grilla: {grid_step}º)")
+    print(f" [OK] Mapa generado exitosamente en: {abs_output} (Grilla: {grid_step}º, Marcadores Perímetro: {show_perimeter_markers})")
     return abs_output
 
 def menuPpal(user):
