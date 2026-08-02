@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-folium = "0.12.1"
+folium = "*"
 geocoder = "*"
 pandas = "*"
 numpy = "*"
@@ -13,16 +13,9 @@ xlrd = "*"
 mpu = "*"
 pyproj = "*"
 openpyxl = "*"
-python-math = "*"
-pyinstaller = "*"
-jsonschema = "*"
-nbconvert = "*"
-gevent = "*"
-importlib-metadata = "*"
 branca = "*"
-gdal = {path = "./GDAL-3.3.3-cp39-cp39-win_amd64.whl"}
-fiona = {path = "./Fiona-1.8.20-cp39-cp39-win_amd64.whl"}
-geopandas = {path = "./geopandas-0.10.2-py2.py3-none-any.whl"}
+pyinstaller = "*"
+flask = "*"
 
 [dev-packages]
 pyinstaller = "*"

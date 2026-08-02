@@ -8,3 +8,15 @@ MapaCurvas.html
 !.gitignore
 
 node_modules/
+
+.venv/
+__pycache__
+
+# ignore compiled executables
+*.exe
+dist/
+build/
+__pycache__/
+.venv/
+.env
+*.pyc

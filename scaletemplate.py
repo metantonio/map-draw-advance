@@ -1,149 +1,106 @@
 from branca.element import Template, MacroElement
 
-def leyenda(htmlMap):
-    template = """
-    {% macro html(this, kwargs) %}
+def leyenda(htmlMap, map_title="Map Draw Advance"):
+    template = f"""
+    {{% macro html(this, kwargs) %}}
 
     <!doctype html>
-    <html lang="en">
+    <html lang="es">
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>@Metantonio</title>
-      <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+      <title>{map_title}</title>
+      <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 
       <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
       <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-      
-      <script>
-      $( function() {
-        $( "#maplegend" ).draggable({
-                        start: function (event, ui) {
-                            $(this).css({
-                                right: "auto",
-                                top: "auto",
-                                bottom: "auto"
-                            });
-                        }
-                    });
-    });
 
+      <script>
+      $( function() {{
+        $( "#maplegend" ).draggable({{
+            containment: "window",
+            start: function (event, ui) {{
+                $(this).css({{
+                    right: "auto",
+                    bottom: "auto"
+                }});
+            }}
+        }});
+      }});
+
+      function printMapPDF() {{
+        window.print();
+      }}
       </script>
+
+      <style>
+      @media print {{
+        .leaflet-control-container .leaflet-top.leaflet-left,
+        .leaflet-control-container .leaflet-top.leaflet-right {{
+            display: none !important;
+        }}
+        .no-print {{
+            display: none !important;
+        }}
+        #maplegend {{
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            z-index: 99999 !important;
+            background: white !important;
+            border: 2px solid #333 !important;
+            box-shadow: none !important;
+        }}
+        body {{
+            background: white !important;
+        }}
+      }}
+      </style>
     </head>
     <body>
 
-     
+    <!-- Leyenda Flotante -->
     <div id='maplegend' class='maplegend' 
-        style='position: absolute; z-index:9999; border:2px solid grey; background-color:rgba(255, 255, 255, 0.8);
-         border-radius:6px; padding: 10px; font-size:14px; right: 20px; bottom: 300px;'>
+        style='position: absolute; z-index:9999; border:1px solid #ccc; background-color: rgba(255, 255, 255, 0.94);
+         border-radius:8px; padding: 12px; font-size:13px; right: 20px; bottom: 40px; box-shadow: 0 4px 14px rgba(0,0,0,0.2); font-family: system-ui, -apple-system, sans-serif;'>
 
-    <button type="button" class="collapsible">    
-        <div class='legend-title'>Escala de Colores</div>
-    </button> 
-    <div class='legend-scale content'>
-      <ul class='legend-labels'>
-        <li><span style='background:red;opacity:0.7;'></span>100%</li>
-        <li><span style='background:rgba(255, 85, 0, 1);opacity:0.7;'></span>90%</li>
-        <li><span style='background:rgba(255, 170, 1, 1);opacity:0.7;'></span>80%</li>
-        <li><span style='background:rgba(255, 255, 1, 1);opacity:0.7;'></span>70%</li>
-        <li><span style='background:rgba(190, 235, 20, 1);opacity:0.7;'></span>60%</li>
-        <li><span style='background:rgba(128, 215, 40, 1);opacity:0.7;'></span>50%</li>
-        <li><span style='background:rgba(63, 195, 60, 1);opacity:0.7;'></span>40%</li>
-        <li><span style='background:rgba(0, 175, 80, 1);opacity:0.7;'></span>30%</li>
-        <li><span style='background:rgba(0, 113, 193, 1);opacity:0.7;'></span>20%</li>
-        <li><span style='background:rgba(129, 159, 221, 1);opacity:0.7;'></span>10%</li>
-        <li><span style='background:rgba(255, 205, 248, 1);opacity:0.7;'></span>0%</li>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+        <button type="button" class="collapsible" style="cursor:pointer; background:none; border:none; font-weight:bold; font-size:13px; color:#2c3e50; outline:none; padding:0;">    
+            🎨 Escala de Radiación RF
+        </button> 
+        <button onclick="printMapPDF()" class="no-print" style="cursor:pointer; background:#2563eb; color:white; border:none; border-radius:4px; padding:3px 8px; font-size:11px; font-weight:600; margin-left:10px;" title="Imprimir o Guardar PDF con Escala">
+            🖨️ PDF
+        </button>
+      </div>
 
-      </ul>
-    </div>
+      <div class='legend-scale content' style='margin-top:6px; display:block;'>
+        <ul class='legend-labels' style='list-style:none; padding:0; margin:0;'>
+          <li style='display:flex; align-items:center; margin-bottom:3px;'><span style='background:#ff0000; opacity:0.9; width:26px; height:13px; display:inline-block; border-radius:2px; margin-right:8px; border:1px solid #777;'></span>100% (Centro Transmisor)</li>
+          <li style='display:flex; align-items:center; margin-bottom:3px;'><span style='background:#ffff00; opacity:0.9; width:26px; height:13px; display:inline-block; border-radius:2px; margin-right:8px; border:1px solid #777;'></span>70%</li>
+          <li style='display:flex; align-items:center; margin-bottom:3px;'><span style='background:#00af50; opacity:0.9; width:26px; height:13px; display:inline-block; border-radius:2px; margin-right:8px; border:1px solid #777;'></span>40%</li>
+          <li style='display:flex; align-items:center; margin-bottom:3px;'><span style='background:#819fdd; opacity:0.9; width:26px; height:13px; display:inline-block; border-radius:2px; margin-right:8px; border:1px solid #777;'></span>20%</li>
+          <li style='display:flex; align-items:center; margin-bottom:3px;'><span style='background:#ffcdfd; opacity:0.9; width:26px; height:13px; display:inline-block; border-radius:2px; margin-right:8px; border:1px solid #777;'></span>0% (Perímetro RF)</li>
+        </ul>
+      </div>
     </div>
 
     <script>
         var coll = document.getElementsByClassName("collapsible");
-        var i;
-
-        for (i = 0; i < coll.length; i++) {
-          coll[i].addEventListener("click", function() {
-            this.classList.toggle("active");
+        for (var i = 0; i < coll.length; i++) {{
+          coll[i].addEventListener("click", function() {{
             var content = this.nextElementSibling;
-            if (content.style.display === "block") {
-              content.style.display = "none";
-            } else {
+            if (content.style.display === "none") {{
               content.style.display = "block";
-            }
-          });
-        }
-        </script>
- 
+            }} else {{
+              content.style.display = "none";
+            }}
+          }});
+        }}
+    </script>
     </body>
     </html>
-
-    <style type='text/css'>
-      .maplegend .legend-title {
-        text-align: left;
-        margin-bottom: 5px;
-        font-weight: bold;
-        font-size: 90%;
-        
-        }
-      .maplegend .legend-scale ul {
-        margin: 0;
-        margin-bottom: 5px;
-        padding: 0;
-        float: left;
-        list-style: none;
-        }
-      .maplegend .legend-scale ul li {
-        font-size: 80%;
-        list-style: none;
-        margin-left: 0;
-        line-height: 18px;
-        margin-bottom: 2px;
-        }
-      .maplegend ul.legend-labels li span {
-        display: block;
-        float: left;
-        height: 16px;
-        width: 30px;
-        margin-right: 5px;
-        margin-left: 0;
-        border: 1px solid #999;
-        }
-      .maplegend .legend-source {
-        font-size: 80%;
-        color: #777;
-        clear: both;
-        }
-      .maplegend a {
-        color: #777;
-        }
-        .collapsible {
-          color: #777;
-          cursor: pointer;
-          background-color:rgba(255, 255, 255, 0.8);
-          width: 100%;
-          border: none;
-          text-align: left;
-          outline: none;
-          font-size: 15px;
-        }
-        .active, .collapsible:hover {
-          background-color:rgba(255, 255, 255, 0.8);
-          opacity=0.7;
-        }
-        .content {
-          padding: 18px;
-          display: none;
-          overflow: hidden;
-          
-        }
-
-    </style>
-    {% endmacro %}"""
+    {{% endmacro %}}"""
 
     macro = MacroElement()
     macro._template = Template(template)
-
     return htmlMap.get_root().add_child(macro)
-
-    #return htmlMap
