@@ -83,9 +83,9 @@ def agregar_grilla(group, grid_step=1.0, bounds=None):
             tooltip=f"Longitud: {lon_val:.4f}º"
         ).add_to(group)
 
-def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion, grid_step=1.0, show_perimeter_markers=False, output_file='Mapa.html'):
+def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion, grid_step=1.0, show_perimeter_markers=False, cajetin_info=None, output_file='Mapa.html'):
     """
-    Construye y guarda el mapa Folium con marcadores de perímetro opcionales e independientes de la curva de radiación.
+    Construye y guarda el mapa Folium con marcadores de perímetro opcionales y datos personalizables del Cajetín de Plano.
     """
     all_coords = []
     default_location = [10.4806, -66.9036]
@@ -325,7 +325,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
             gradient={0.0: '#ffcdfd', 0.25: '#819fdd', 0.5: '#00af50', 0.75: '#ffff00', 1.0: '#ff0000'}
         ).add_to(fg_heatmap)
 
-        leyenda(myMap)
+        leyenda(myMap, cajetin_info=cajetin_info)
 
     # Determinar Encuadre / Bounds SOLO con coordenadas geográficas válidas
     bounds = None
@@ -386,7 +386,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     # Guardar mapa en ruta absoluta
     abs_output = os.path.abspath(output_file)
     myMap.save(abs_output)
-    print(f" [OK] Mapa generado exitosamente en: {abs_output} (Grilla: {grid_step}º, Marcadores Perímetro: {show_perimeter_markers})")
+    print(f" [OK] Mapa generado exitosamente en: {abs_output} (Grilla: {grid_step}º)")
     return abs_output
 
 def menuPpal(user):

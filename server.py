@@ -246,10 +246,12 @@ def api_generate_map():
         radiacion = req.get('radiacion', [])
         grid_step = float(req.get('grid_step', 1.0))
         show_markers = bool(req.get('show_perimeter_markers', False))
+        cajetin_info = req.get('cajetin_info', None)
 
         out_file = build_folium_map(
             localizacion, linea, circulo, radiacion,
-            grid_step=grid_step, show_perimeter_markers=show_markers, output_file='Mapa.html'
+            grid_step=grid_step, show_perimeter_markers=show_markers,
+            cajetin_info=cajetin_info, output_file='Mapa.html'
         )
         return jsonify({
             'status': 'ok',

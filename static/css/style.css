@@ -331,6 +331,36 @@ body {
   100% { transform: translateX(250%); }
 }
 
+/* Form Controls */
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+
+}
+
+.form-control-input {
+  width: 100%;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  outline: none;
+}
+
+.form-control-input:focus {
+  border-color: var(--accent-blue);
+}
+
 /* Modal */
 .modal-backdrop {
   position: fixed;

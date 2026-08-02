@@ -107,9 +107,40 @@ function bindEvents() {
   // Generar Mapa Manual
   document.getElementById('btnGenerateMap').addEventListener('click', () => generateMap(false));
 
-  // Exportar PNG y PDF (Impresión con Cajetín de Plano)
-  document.getElementById('btnExportPNG').addEventListener('click', exportMapPDF);
-  document.getElementById('btnExportPDF').addEventListener('click', exportMapPDF);
+  // Abrir Modal de Configuración de Cajetín para Exportar PDF
+  const cajModal = document.getElementById('cajetinModal');
+  document.getElementById('btnExportPDF').addEventListener('click', () => {
+    const now = new Date();
+    const formattedDate = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+    document.getElementById('caj_fecha').value = formattedDate;
+    cajModal.style.display = 'flex';
+  });
+
+  document.getElementById('btnCloseCajetin').addEventListener('click', () => cajModal.style.display = 'none');
+  document.getElementById('btnCancelCajetin').addEventListener('click', () => cajModal.style.display = 'none');
+
+  document.getElementById('btnConfirmPrintPDF').addEventListener('click', async () => {
+    cajModal.style.display = 'none';
+    
+    // Recopilar información del Cajetín
+    const cajetin_info = {
+      titulo: document.getElementById('caj_titulo').value || 'MAP DRAW ADVANCE v2.0 — PLANO GEOESPACIAL',
+      proyecto: document.getElementById('caj_proyecto').value || 'Levantamiento de Coordenadas & Patrón de Radiación RF',
+      cliente: document.getElementById('caj_cliente').value || 'General',
+      autor: document.getElementById('caj_autor').value || 'Antonio Martínez (@metantonio)',
+      revisado: document.getElementById('caj_revisado').value || 'Ing. Coordinador',
+      fecha: document.getElementById('caj_fecha').value || new Date().toLocaleDateString(),
+      notas: document.getElementById('caj_notas').value || 'WGS-84 / UTM Transverse Mercator'
+    };
+
+    // Regenerar Mapa con la información del Cajetín
+    await generateMap(false, cajetin_info);
+
+    // Esperar un instante breve para que el iFrame cargue y luego imprimir
+    setTimeout(() => {
+      exportMapPDF();
+    }, 400);
+  });
 
   // Modal de Créditos
   const modal = document.getElementById('creditsModal');
@@ -346,7 +377,7 @@ function reloadMapFrame(url) {
 }
 
 // Generar Mapa enviando datos al Backend
-async function generateMap(silent = false) {
+async function generateMap(silent = false, cajetin_info = null) {
   const btn = document.getElementById('btnGenerateMap');
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
@@ -367,7 +398,8 @@ async function generateMap(silent = false) {
       body: JSON.stringify({
         ...currentData,
         grid_step: grid_step,
-        show_perimeter_markers: show_perimeter_markers
+        show_perimeter_markers: show_perimeter_markers,
+        cajetin_info: cajetin_info
       })
     });
 

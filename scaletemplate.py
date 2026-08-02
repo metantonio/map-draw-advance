@@ -1,6 +1,18 @@
 from branca.element import Template, MacroElement
+import time
 
-def leyenda(htmlMap, map_title="Map Draw Advance"):
+def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None):
+    if not cajetin_info:
+        cajetin_info = {
+            'titulo': 'MAP DRAW ADVANCE v2.0 — PLANO GEOESPACIAL',
+            'proyecto': 'Levantamiento de Coordenadas & Patrón de Radiación RF',
+            'cliente': 'General',
+            'autor': 'Antonio Martínez (@metantonio)',
+            'revisado': 'Ing. Coordinador',
+            'fecha': time.strftime("%d/%m/%Y"),
+            'notas': 'WGS-84 / UTM Transverse Mercator'
+        }
+
     template = f"""
     {{% macro html(this, kwargs) %}}
 
@@ -39,7 +51,7 @@ def leyenda(htmlMap, map_title="Map Draw Advance"):
         display: none;
       }}
 
-      /* ESTILOS DE IMPRESIÓN Y EXPORTACIÓN PDF (CAJETÍN DE PLANO TÉCNICO) */
+      /* ESTILOS DE IMPRESIÓN Y EXPORTACIÓN PDF (CAJETÍN DE PLANO TÉCNICO DE INGENIERÍA) */
       @media print {{
         @page {{
           size: A4 landscape;
@@ -50,6 +62,21 @@ def leyenda(htmlMap, map_title="Map Draw Advance"):
           background: white !important;
           margin: 0 !important;
           padding: 0 !important;
+        }}
+
+        /* ELIMINAR FONDO BLANCO Y SOMBRAS EN ICONOS DE MARCADORES */
+        .leaflet-marker-shadow {{
+          display: none !important;
+        }}
+
+        .leaflet-marker-icon,
+        .awesome-marker,
+        .leaflet-div-icon,
+        .awesome-marker i {{
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          filter: none !important;
         }}
 
         /* Ocultar Todos los Menús Contextuales y Botones del Mapa */
@@ -74,7 +101,7 @@ def leyenda(htmlMap, map_title="Map Draw Advance"):
           position: fixed !important;
           bottom: 10mm !important;
           right: 10mm !important;
-          width: 320px !important;
+          width: 340px !important;
           background: #ffffff !important;
           border: 2.5px solid #000000 !important;
           box-shadow: none !important;
@@ -87,9 +114,9 @@ def leyenda(htmlMap, map_title="Map Draw Advance"):
         .cajetin-header {{
           background: #000000 !important;
           color: #ffffff !important;
-          padding: 6px 10px !important;
+          padding: 5px 8px !important;
           text-align: center !important;
-          font-size: 11px !important;
+          font-size: 10.5px !important;
           font-weight: bold !important;
           letter-spacing: 0.5px !important;
           text-transform: uppercase !important;
@@ -98,7 +125,7 @@ def leyenda(htmlMap, map_title="Map Draw Advance"):
         .cajetin-table {{
           width: 100% !important;
           border-collapse: collapse !important;
-          font-size: 9.5px !important;
+          font-size: 9px !important;
         }}
 
         .cajetin-table td {{
@@ -109,14 +136,14 @@ def leyenda(htmlMap, map_title="Map Draw Advance"):
 
         .cajetin-label {{
           font-weight: bold !important;
-          font-size: 8.5px !important;
+          font-size: 8px !important;
           color: #333333 !important;
           text-transform: uppercase !important;
           display: block !important;
         }}
 
         .cajetin-val {{
-          font-size: 9.5px !important;
+          font-size: 9px !important;
           color: #000000 !important;
           font-weight: 600 !important;
         }}
@@ -159,37 +186,53 @@ def leyenda(htmlMap, map_title="Map Draw Advance"):
       </div>
     </div>
 
-    <!-- CAJETÍN TÉCNICO DE PLANO (VISIBILIDAD EXCLUSIVA AL IMPRIMIR EN PDF) -->
+    <!-- CAJETÍN TÉCNICO DE PLANO (PERSONALIZABLE - VISIBILIDAD EXCLUSIVA AL IMPRIMIR EN PDF) -->
     <div id="cajetin-plano">
-      <div class="cajetin-header">
-        MAP DRAW ADVANCE v2.0 — PLANO GEOESPACIAL
+      <div class="cajetin-header" id="cj-hdr-titulo">
+        {cajetin_info.get('titulo', 'MAP DRAW ADVANCE v2.0 — PLANO GEOESPACIAL')}
       </div>
       <table class="cajetin-table">
         <tr>
           <td colspan="2">
             <span class="cajetin-label">PROYECTO / DOCUMENTO</span>
-            <span class="cajetin-val">Levantamiento de Coordenadas & Patrón de Radiación RF</span>
+            <span class="cajetin-val" id="cj-val-proyecto">{cajetin_info.get('proyecto', 'Levantamiento de Coordenadas & Patrón de Radiación RF')}</span>
           </td>
         </tr>
         <tr>
           <td>
-            <span class="cajetin-label">DESARROLLADOR</span>
-            <span class="cajetin-val">Antonio Martínez (@metantonio)</span>
+            <span class="cajetin-label">CLIENTE / EMPRESA</span>
+            <span class="cajetin-val" id="cj-val-cliente">{cajetin_info.get('cliente', 'General')}</span>
           </td>
           <td>
-            <span class="cajetin-label">DATOS GEOESPACIALES</span>
-            <span class="cajetin-val">WGS-84 / UTM Transverse Mercator</span>
+            <span class="cajetin-label">DIBUJADO POR</span>
+            <span class="cajetin-val" id="cj-val-autor">{cajetin_info.get('autor', 'Antonio Martínez (@metantonio)')}</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="cajetin-label">REVISADO POR</span>
+            <span class="cajetin-val" id="cj-val-revisado">{cajetin_info.get('revisado', 'Ing. Coordinador')}</span>
+          </td>
+          <td>
+            <span class="cajetin-label">FECHA DE EMISIÓN</span>
+            <span class="cajetin-val" id="cj-val-fecha">{cajetin_info.get('fecha', time.strftime("%d/%m/%Y"))}</span>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <span class="cajetin-label">SISTEMA & NOTAS</span>
+            <span class="cajetin-val" id="cj-val-notas">{cajetin_info.get('notas', 'WGS-84 / UTM Transverse Mercator')}</span>
           </td>
         </tr>
         <tr>
           <td colspan="2">
             <span class="cajetin-label">LEYENDA DE RADIACIÓN RF (ATENUACIÓN NO LINEAL)</span>
-            <div style="margin-top: 3px; font-size: 8.5px;">
+            <div style="margin-top: 2px; font-size: 8px;">
               <span class="legend-color-box" style="background:#ff0000;"></span> 100% Centro
-              <span class="legend-color-box" style="background:#ffff00; margin-left: 6px;"></span> 70%
-              <span class="legend-color-box" style="background:#00af50; margin-left: 6px;"></span> 40%
-              <span class="legend-color-box" style="background:#819fdd; margin-left: 6px;"></span> 20%
-              <span class="legend-color-box" style="background:#ffcdfd; margin-left: 6px;"></span> 0% Perímetro
+              <span class="legend-color-box" style="background:#ffff00; margin-left: 5px;"></span> 70%
+              <span class="legend-color-box" style="background:#00af50; margin-left: 5px;"></span> 40%
+              <span class="legend-color-box" style="background:#819fdd; margin-left: 5px;"></span> 20%
+              <span class="legend-color-box" style="background:#ffcdfd; margin-left: 5px;"></span> 0% Perímetro
             </div>
           </td>
         </tr>
