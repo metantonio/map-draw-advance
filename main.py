@@ -85,7 +85,7 @@ def agregar_grilla(group, grid_step=1.0, bounds=None):
 
 def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion, grid_step=1.0, show_perimeter_markers=False, cajetin_info=None, output_file='Mapa.html'):
     """
-    Construye y guarda el mapa Folium con marcadores de perímetro opcionales y datos personalizables del Cajetín de Plano.
+    Construye y guarda el mapa Folium con marcadores de perímetro opcionales, etiquetas visibles bajo marcadores y datos del Cajetín de Plano.
     """
     all_coords = []
     default_location = [10.4806, -66.9036]
@@ -116,9 +116,18 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     # Transformación a UTM
     df_loc, df_lin, df_cir, df_rad_g, df_rad_utm = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
+    puntos_cajetin = []
     if norte_GMS:
         n_utm, e_utm, h_utm = zip(*[gms2utm(n, e) for n, e in zip(norte_GMS, este_GMS)])
         df_loc = pd.DataFrame({'Norte': n_utm, 'Este': e_utm, 'Huso': h_utm})
+
+        for i in range(len(norte_GMS)):
+            if abs(norte_GMS[i]) > 0.0001 and abs(este_GMS[i]) > 0.0001:
+                puntos_cajetin.append({
+                    'nombre': sobrenombre[i] if i < len(sobrenombre) else f"Punto_{i+1}",
+                    'wgs84': f"{norte_GMS[i]:.5f}º, {este_GMS[i]:.5f}º",
+                    'utm': f"{n_utm[i]:.0f} N, {e_utm[i]:.0f} E ({h_utm[i]})"
+                })
 
     if norte_GMSL:
         n_utm, e_utm, h_utm = zip(*[gms2utm(n, e) for n, e in zip(norte_GMSL, este_GMSL)])
@@ -216,7 +225,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     fg_heatmap = folium.FeatureGroup(name="🔥 Patrón de Radiación (Heatmap RF)")
     fg_grilla = folium.FeatureGroup(name=f"🌐 Grilla Lat/Lon ({grid_step}º)", show=True)
 
-    # 1. Puntos Localización
+    # 1. Puntos Localización (CON ETIQUETAS PERMANENTES VISIBLES DEBAJO DEL MARCADOR)
     if coordenadas:
         for i in range(len(coordenadas)):
             if abs(coordenadas[i][0]) > 0.0001 and abs(coordenadas[i][1]) > 0.0001:
@@ -241,11 +250,21 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
                     </table>
                 </div>
                 """
+
+                # Tooltip permanente posicionado debajo del marcador
+                perm_tooltip = folium.Tooltip(
+                    text=f"<b>{nombre}</b>",
+                    permanent=True,
+                    direction="bottom",
+                    offset=[0, 10],
+                    style="background-color: rgba(255, 255, 255, 0.92); border: 1px solid #1e293b; border-radius: 4px; color: #0f172a; font-weight: bold; font-size: 11px; padding: 2px 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.25);"
+                )
+
                 folium.Marker(
                     coordenadas[i],
                     icon=icon_obj,
                     popup=folium.Popup(popup_html, max_width=300),
-                    tooltip=f"<b>{nombre}</b>"
+                    tooltip=perm_tooltip
                 ).add_to(fg_localizacion)
 
     # 2. Marcadores del perímetro de radiación (Capa Independiente Opcional)
@@ -258,7 +277,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
                     coord,
                     icon=folium.Icon(color='red', icon='crosshairs', prefix='fa'),
                     popup=f"Vértice Radiación #{i+1}<br>N: {coord[0]:.6f}º<br>E: {coord[1]:.6f}º<br>Atenuación RF: 0%",
-                    tooltip=f"Perímetro RF #{i+1} (0%)"
+                    tooltip=f"Perímetro RF #{i+1}"
                 ).add_to(fg_perimetro_marcadores)
 
     # 3. Polilíneas
@@ -325,7 +344,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
             gradient={0.0: '#ffcdfd', 0.25: '#819fdd', 0.5: '#00af50', 0.75: '#ffff00', 1.0: '#ff0000'}
         ).add_to(fg_heatmap)
 
-        leyenda(myMap, cajetin_info=cajetin_info)
+    leyenda(myMap, cajetin_info=cajetin_info, puntos_cajetin=puntos_cajetin)
 
     # Determinar Encuadre / Bounds SOLO con coordenadas geográficas válidas
     bounds = None

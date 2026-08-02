@@ -110,6 +110,9 @@ function bindEvents() {
 
   // Abrir Modal de Configuración de Cajetín para Exportar PDF
   const cajModal = document.getElementById('cajetinModal');
+  const chkIncludeCajetin = document.getElementById('chkIncludeCajetin');
+  const cajFieldsGroup = document.getElementById('cajetinFieldsGroup');
+
   document.getElementById('btnExportPDF').addEventListener('click', () => {
     const now = new Date();
     const formattedDate = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
@@ -117,12 +120,18 @@ function bindEvents() {
     cajModal.style.display = 'flex';
   });
 
+  chkIncludeCajetin.addEventListener('change', () => {
+    cajFieldsGroup.style.opacity = chkIncludeCajetin.checked ? '1' : '0.4';
+    cajFieldsGroup.style.pointerEvents = chkIncludeCajetin.checked ? 'auto' : 'none';
+  });
+
   document.getElementById('btnCloseCajetin').addEventListener('click', () => cajModal.style.display = 'none');
   document.getElementById('btnCancelCajetin').addEventListener('click', () => cajModal.style.display = 'none');
 
-  // Confirmar Impresión de PDF actualizando el Cajetín en vivo SIN recargar el mapa
+  // Confirmar Impresión de PDF actualizando el Cajetín en vivo (o bien ocultándolo si es opcional)
   document.getElementById('btnConfirmPrintPDF').addEventListener('click', () => {
     cajModal.style.display = 'none';
+    const includeCajetin = chkIncludeCajetin.checked;
     
     const caj_titulo = document.getElementById('caj_titulo').value || 'MAP DRAW ADVANCE v2.0 — PLANO GEOESPACIAL';
     const caj_proyecto = document.getElementById('caj_proyecto').value || 'Levantamiento de Coordenadas & Patrón de Radiación RF';
@@ -137,6 +146,15 @@ function bindEvents() {
     try {
       const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
       if (iframeDoc) {
+        const cajetinEl = iframeDoc.getElementById('cajetin-plano');
+        if (cajetinEl) {
+          if (includeCajetin) {
+            cajetinEl.classList.remove('hide-cajetin-print');
+          } else {
+            cajetinEl.classList.add('hide-cajetin-print');
+          }
+        }
+
         const elTitulo = iframeDoc.getElementById('cj-hdr-titulo');
         if (elTitulo) elTitulo.textContent = caj_titulo;
 
@@ -183,7 +201,6 @@ function bindEvents() {
   });
 
   // Ocultar overlay al terminar de cargar el iFrame
-  const iframe = document.getElementById('mapFrame');
   iframe.addEventListener('load', () => {
     showLoading(false);
   });

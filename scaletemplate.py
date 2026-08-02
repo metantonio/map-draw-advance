@@ -1,7 +1,7 @@
 from branca.element import Template, MacroElement
 import time
 
-def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None):
+def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None, puntos_cajetin=None):
     if not cajetin_info:
         cajetin_info = {
             'titulo': 'MAP DRAW ADVANCE v2.0 — PLANO GEOESPACIAL',
@@ -13,6 +13,43 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None):
             'notas': 'WGS-84 / UTM Transverse Mercator'
         }
 
+    if puntos_cajetin is None:
+        puntos_cajetin = []
+
+    # Construir HTML de la tabla de puntos dentro del Cajetín
+    puntos_html = ""
+    if puntos_cajetin:
+        puntos_rows = ""
+        for pt in puntos_cajetin[:10]: # Limitar a los primeros 10 para ajustar espacio en cajetín
+            puntos_rows += f"""
+            <tr>
+              <td style="border: 1px solid #000; padding: 2px 4px; font-weight: bold;">{pt.get('nombre', 'Punto')}</td>
+              <td style="border: 1px solid #000; padding: 2px 4px;">{pt.get('wgs84', '')}</td>
+              <td style="border: 1px solid #000; padding: 2px 4px;">{pt.get('utm', '')}</td>
+            </tr>
+            """
+        puntos_html = f"""
+        <tr>
+          <td colspan="2" style="padding: 0;">
+            <div style="background: #000000; color: #ffffff; font-size: 8px; font-weight: bold; padding: 2px 4px; text-transform: uppercase; text-align: center;">
+              📍 VÉRTICES & PUNTOS DE INTERÉS
+            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:8px; background:#fff;">
+              <thead>
+                <tr style="background:#e2e8f0; font-weight:bold; font-size:7.5px; text-transform:uppercase;">
+                  <td style="border:1px solid #000; padding:2px 4px;">Etiqueta</td>
+                  <td style="border:1px solid #000; padding:2px 4px;">WGS-84 (Lat, Lon)</td>
+                  <td style="border:1px solid #000; padding:2px 4px;">UTM (Norte, Este, Huso)</td>
+                </tr>
+              </thead>
+              <tbody>
+                {puntos_rows}
+              </tbody>
+            </table>
+          </td>
+        </tr>
+        """
+
     template = f"""
     {{% macro html(this, kwargs) %}}
 
@@ -20,7 +57,7 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None):
     <html lang="es">
     <head>
       <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>{map_title} - Plano Geoespacial</title>
       <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 
@@ -51,7 +88,24 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None):
         display: none;
       }}
 
-      /* ESTILOS DE IMPRESIÓN Y EXPORTACIÓN PDF (CAJETÍN DE PLANO TÉCNICO DE INGENIERÍA) */
+      /* ESTILOS DE ETIQUETAS PERMANENTES DE MARCADORES */
+      .leaflet-tooltip.marker-label-style {{
+        background-color: rgba(255, 255, 255, 0.92) !important;
+        border: 1px solid #1e293b !important;
+        border-radius: 4px !important;
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        font-size: 11px !important;
+        padding: 2px 6px !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.25) !important;
+        white-space: nowrap !important;
+      }}
+
+      .leaflet-tooltip-bottom:before {{
+        border-bottom-color: #1e293b !important;
+      }}
+
+      /* ESTILOS DE IMPRESIÓN Y EXPORTACIÓN PDF */
       @media print {{
         @page {{
           size: A4 landscape;
@@ -62,6 +116,19 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None):
           background: white !important;
           margin: 0 !important;
           padding: 0 !important;
+        }}
+
+        /* ETIQUETAS VISIBLES E IMPRESAS DEBAJO DE LOS MARCADORES */
+        .leaflet-tooltip {{
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          background: #ffffff !important;
+          color: #000000 !important;
+          border: 1px solid #000000 !important;
+          font-weight: bold !important;
+          font-size: 10px !important;
+          box-shadow: none !important;
         }}
 
         /* ELIMINAR FONDO BLANCO Y SOMBRAS EN ICONOS DE MARCADORES */
@@ -79,13 +146,15 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None):
           filter: none !important;
         }}
 
-        /* Ocultar Todos los Menús Contextuales y Botones del Mapa */
+        /* Ocultar Todos los Menús Contextuales, Botones y Cuadro de Coordenadas del Mapa */
         .leaflet-control-zoom,
         .leaflet-control-layers,
         .leaflet-draw,
         .leaflet-draw-toolbar,
         .leaflet-control-fullscreen,
         .leaflet-control-measure,
+        .leaflet-control-mouseposition,
+        .leaflet-container .leaflet-control-mouseposition,
         .no-print {{
           display: none !important;
         }}
@@ -95,13 +164,18 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None):
           display: none !important;
         }}
 
-        /* Mostrar Cajetín de Plano de Ingeniería en Esquina Inferior Derecha */
+        /* Clase para ocultar explícitamente el Cajetín si el usuario lo desea */
+        .hide-cajetin-print {{
+          display: none !important;
+        }}
+
+        /* Cajetín de Plano de Ingeniería */
         #cajetin-plano {{
-          display: block !important;
+          display: block;
           position: fixed !important;
           bottom: 10mm !important;
           right: 10mm !important;
-          width: 340px !important;
+          width: 360px !important;
           background: #ffffff !important;
           border: 2.5px solid #000000 !important;
           box-shadow: none !important;
@@ -125,25 +199,25 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None):
         .cajetin-table {{
           width: 100% !important;
           border-collapse: collapse !important;
-          font-size: 9px !important;
+          font-size: 8.5px !important;
         }}
 
         .cajetin-table td {{
           border: 1px solid #000000 !important;
-          padding: 4px 6px !important;
+          padding: 3px 5px !important;
           vertical-align: top !important;
         }}
 
         .cajetin-label {{
           font-weight: bold !important;
-          font-size: 8px !important;
+          font-size: 7.5px !important;
           color: #333333 !important;
           text-transform: uppercase !important;
           display: block !important;
         }}
 
         .cajetin-val {{
-          font-size: 9px !important;
+          font-size: 8.5px !important;
           color: #000000 !important;
           font-weight: 600 !important;
         }}
@@ -224,10 +298,11 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None):
             <span class="cajetin-val" id="cj-val-notas">{cajetin_info.get('notas', 'WGS-84 / UTM Transverse Mercator')}</span>
           </td>
         </tr>
+        {puntos_html}
         <tr>
           <td colspan="2">
             <span class="cajetin-label">LEYENDA DE RADIACIÓN RF (ATENUACIÓN NO LINEAL)</span>
-            <div style="margin-top: 2px; font-size: 8px;">
+            <div style="margin-top: 2px; font-size: 7.5px;">
               <span class="legend-color-box" style="background:#ff0000;"></span> 100% Centro
               <span class="legend-color-box" style="background:#ffff00; margin-left: 5px;"></span> 70%
               <span class="legend-color-box" style="background:#00af50; margin-left: 5px;"></span> 40%
