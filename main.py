@@ -72,7 +72,8 @@ def agregar_grilla(group, grid_step=1.0, bounds=None):
 
 def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion, grid_step=1.0, output_file='Mapa.html'):
     """
-    Construye y guarda el mapa Folium con perímetro de radiación en curvas suaves, grilla y atenuación RF.
+    Construye y guarda el mapa Folium con filtrado seguro de coordenadas válidas para evitar zoom-out a mapa mundi,
+    y script de auto-ajuste de tamaño Leaflet para evitar recuadros grises.
     """
     all_coords = []
     default_location = [10.4806, -66.9036]
@@ -145,9 +146,15 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     except Exception as e:
         print(f"[!] No se pudo guardar resultsUTM.xlsx: {e}")
 
+    # Filtrar coordenadas válidas (excluyendo 0,0 por defecto de filas vacías)
+    valid_initial = [c for c in coordenadas if abs(c[0]) > 0.0001 and abs(c[1]) > 0.0001]
+    if not valid_initial:
+        valid_initial = [c for c in coordenadasL if abs(c[0]) > 0.0001 and abs(c[1]) > 0.0001]
+    
+    initial_center = valid_initial[0] if valid_initial else default_location
+
     # Inicializar Folium Map con tiles=None para evitar capas duplicadas
-    initial_center = coordenadas[0] if coordenadas else (coordenadasL[0] if coordenadasL else default_location)
-    myMap = folium.Map(location=initial_center, zoom_start=11, control_scale=True, tiles=None)
+    myMap = folium.Map(location=initial_center, zoom_start=12, control_scale=True, tiles=None)
 
     # Añadir Capas Base Estándar
     folium.TileLayer('openstreetmap', name='OpenStreetMap (Estándar)').add_to(myMap)
@@ -199,56 +206,59 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     # 1. Puntos Localización
     if coordenadas:
         for i in range(len(coordenadas)):
-            all_coords.append(coordenadas[i])
-            icon_color = colorM[i] if i < len(colorM) and str(colorM[i]) != 'nan' and colorM[i] in ['red', 'blue', 'green', 'purple', 'orange', 'darkred', 'lightred', 'beige', 'darkblue', 'darkgreen', 'cadetblue', 'darkpurple', 'white', 'pink', 'lightblue', 'lightgreen', 'gray', 'black', 'lightgray'] else 'blue'
-            tipo = tipoIcon[i] if i < len(tipoIcon) else 'Default'
-            dir_icon = direccion[i] if i < len(direccion) else ''
-            nombre = sobrenombre[i] if i < len(sobrenombre) else f"Punto_{i+1}"
+            if abs(coordenadas[i][0]) > 0.0001 and abs(coordenadas[i][1]) > 0.0001:
+                all_coords.append(coordenadas[i])
+                icon_color = colorM[i] if i < len(colorM) and str(colorM[i]) != 'nan' and colorM[i] in ['red', 'blue', 'green', 'purple', 'orange', 'darkred', 'lightred', 'beige', 'darkblue', 'darkgreen', 'cadetblue', 'darkpurple', 'white', 'pink', 'lightblue', 'lightgreen', 'gray', 'black', 'lightgray'] else 'blue'
+                tipo = tipoIcon[i] if i < len(tipoIcon) else 'Default'
+                dir_icon = direccion[i] if i < len(direccion) else ''
+                nombre = sobrenombre[i] if i < len(sobrenombre) else f"Punto_{i+1}"
 
-            if tipo != "Default" and dir_icon and os.path.exists(dir_icon):
-                icon_obj = folium.features.CustomIcon(dir_icon, icon_size=(40, 40))
-            else:
-                icon_obj = folium.Icon(color=icon_color, icon='info-sign')
+                if tipo != "Default" and dir_icon and os.path.exists(dir_icon):
+                    icon_obj = folium.features.CustomIcon(dir_icon, icon_size=(40, 40))
+                else:
+                    icon_obj = folium.Icon(color=icon_color, icon='info-sign')
 
-            popup_html = f"""
-            <div style="font-family: sans-serif; min-width: 180px;">
-                <h4 style="margin: 0 0 8px 0; color: #2c3e50;">📍 {nombre}</h4>
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                    <tr><td><b>Latitud:</b></td><td>{coordenadas[i][0]:.6f} º</td></tr>
-                    <tr><td><b>Longitud:</b></td><td>{coordenadas[i][1]:.6f} º</td></tr>
-                    <tr><td><b>Índice:</b></td><td>#{i+1}</td></tr>
-                </table>
-            </div>
-            """
-            folium.Marker(
-                coordenadas[i],
-                icon=icon_obj,
-                popup=folium.Popup(popup_html, max_width=300),
-                tooltip=f"<b>{nombre}</b>"
-            ).add_to(fg_localizacion)
+                popup_html = f"""
+                <div style="font-family: sans-serif; min-width: 180px;">
+                    <h4 style="margin: 0 0 8px 0; color: #2c3e50;">📍 {nombre}</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <tr><td><b>Latitud:</b></td><td>{coordenadas[i][0]:.6f} º</td></tr>
+                        <tr><td><b>Longitud:</b></td><td>{coordenadas[i][1]:.6f} º</td></tr>
+                        <tr><td><b>Índice:</b></td><td>#{i+1}</td></tr>
+                    </table>
+                </div>
+                """
+                folium.Marker(
+                    coordenadas[i],
+                    icon=icon_obj,
+                    popup=folium.Popup(popup_html, max_width=300),
+                    tooltip=f"<b>{nombre}</b>"
+                ).add_to(fg_localizacion)
 
     # 2. Marcadores del perímetro de radiación
     if norte_GMSP2:
         for i in range(len(norte_GMSP2)):
             coord = [norte_GMSP2[i], este_GMSP2[i]]
-            all_coords.append(coord)
-            folium.Marker(
-                coord,
-                icon=folium.Icon(color='red', icon='crosshairs', prefix='fa'),
-                popup=f"Vértice Radiación #{i+1}<br>N: {coord[0]:.6f}º<br>E: {coord[1]:.6f}º<br>Atenuación RF: 0%",
-                tooltip=f"Perímetro RF #{i+1} (0%)"
-            ).add_to(fg_perimetro)
+            if abs(coord[0]) > 0.0001 and abs(coord[1]) > 0.0001:
+                all_coords.append(coord)
+                folium.Marker(
+                    coord,
+                    icon=folium.Icon(color='red', icon='crosshairs', prefix='fa'),
+                    popup=f"Vértice Radiación #{i+1}<br>N: {coord[0]:.6f}º<br>E: {coord[1]:.6f}º<br>Atenuación RF: 0%",
+                    tooltip=f"Perímetro RF #{i+1} (0%)"
+                ).add_to(fg_perimetro)
 
     # 3. Polilíneas
-    if coordenadasL:
-        for c in coordenadasL: all_coords.append(c)
+    valid_L = [c for c in coordenadasL if abs(c[0]) > 0.0001 and abs(c[1]) > 0.0001]
+    if valid_L:
+        for c in valid_L: all_coords.append(c)
         dist_linea = []
-        for i in range(len(este_GMSL) - 1):
-            d_km = haversine_distance((norte_GMSL[i], este_GMSL[i]), (norte_GMSL[i+1], este_GMSL[i+1]))
+        for i in range(len(valid_L) - 1):
+            d_km = haversine_distance(valid_L[i], valid_L[i+1])
             dist_linea.append(round(d_km, 3))
 
         folium.PolyLine(
-            coordenadasL,
+            valid_L,
             color="#e74c3c",
             weight=3.5,
             opacity=0.9,
@@ -259,35 +269,36 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     # 4. Perímetro de Radiación con CURVAS SUAVES
     if norte_GMSP:
         lat_c, lon_c = norte_GMSP[0], este_GMSP[0]
-        smooth_coords = smooth_radiation_perimeter(lat_c, lon_c, anguloP, distanciaP)
-        
-        for sc in smooth_coords:
-            all_coords.append(sc)
+        if abs(lat_c) > 0.0001 and abs(lon_c) > 0.0001:
+            smooth_coords = smooth_radiation_perimeter(lat_c, lon_c, anguloP, distanciaP)
+            for sc in smooth_coords:
+                all_coords.append(sc)
 
-        folium.PolyLine(
-            smooth_coords,
-            color="#8e44ad",
-            weight=3.5,
-            opacity=0.95,
-            smooth_factor=1.0,
-            popup="<b>Perímetro de Radiación RF (Curva Suave)</b><br>Contorno de Cobertura Radioeléctrica",
-            tooltip="Perímetro RF (Curva Suave)"
-        ).add_to(fg_perimetro)
+            folium.PolyLine(
+                smooth_coords,
+                color="#8e44ad",
+                weight=3.5,
+                opacity=0.95,
+                smooth_factor=1.0,
+                popup="<b>Perímetro de Radiación RF (Curva Suave)</b><br>Contorno de Cobertura Radioeléctrica",
+                tooltip="Perímetro RF (Curva Suave)"
+            ).add_to(fg_perimetro)
 
     # 5. Círculos
     if coordenadasC:
         for i in range(len(coordenadasC)):
-            all_coords.append(coordenadasC[i])
-            rad = radio[i] if i < len(radio) else 100
-            folium.Circle(
-                coordenadasC[i],
-                radius=rad,
-                popup=f"<b>Círculo #{i+1}</b><br>Centro: {coordenadasC[i]}<br>Radio: {rad} m",
-                color='#3498db',
-                fill_color='#3498db',
-                fill=True,
-                fill_opacity=0.3
-            ).add_to(fg_circulos)
+            if abs(coordenadasC[i][0]) > 0.0001 and abs(coordenadasC[i][1]) > 0.0001:
+                all_coords.append(coordenadasC[i])
+                rad = radio[i] if i < len(radio) else 100
+                folium.Circle(
+                    coordenadasC[i],
+                    radius=rad,
+                    popup=f"<b>Círculo #{i+1}</b><br>Centro: {coordenadasC[i]}<br>Radio: {rad} m",
+                    color='#3498db',
+                    fill_color='#3498db',
+                    fill=True,
+                    fill_opacity=0.3
+                ).add_to(fg_circulos)
 
     # 6. Heatmap de Señal de Radio Fluid & Continuous
     if dataHeatMap:
@@ -303,11 +314,12 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
 
         leyenda(myMap)
 
-    # Determinar Encuadre / Bounds
+    # Determinar Encuadre / Bounds SOLO con coordenadas geográficas estrictamente válidas
     bounds = None
-    if all_coords:
-        lats = [c[0] for c in all_coords]
-        lons = [c[1] for c in all_coords]
+    valid_coords = [c for c in all_coords if abs(c[0]) > 0.0001 and abs(c[1]) > 0.0001]
+    if valid_coords:
+        lats = [c[0] for c in valid_coords]
+        lons = [c[1] for c in valid_coords]
         south_west = [min(lats), min(lons)]
         north_east = [max(lats), max(lons)]
         if south_west == north_east:
@@ -335,14 +347,24 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     Fullscreen(position='topleft', title='Pantalla Completa', title_cancel='Salir Pantalla Completa').add_to(myMap)
     Draw(export=True, filename='mis_dibujos.geojson', position='topleft').add_to(myMap)
 
-    # Script JS para asegurar invalidador de tamaño de mapa Leaflet en iFrame
+    # Inyectar Script para Forzar Invalidador de Tamaño de Mapa Leaflet
     resize_js = """
     <script>
+    function fixLeafletMapSize() {
+        for (var key in window) {
+            try {
+                if (window[key] && window[key] instanceof L.Map) {
+                    window[key].invalidateSize();
+                }
+            } catch(e) {}
+        }
+    }
     window.addEventListener('load', function() {
-        setTimeout(function() {
-            window.dispatchEvent(new Event('resize'));
-        }, 300);
+        setTimeout(fixLeafletMapSize, 100);
+        setTimeout(fixLeafletMapSize, 400);
+        setTimeout(fixLeafletMapSize, 1000);
     });
+    window.addEventListener('resize', fixLeafletMapSize);
     </script>
     """
     myMap.get_root().html.add_child(folium.Element(resize_js))

@@ -11,6 +11,85 @@ from main import build_folium_map
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
+def create_excel_template(output_path='plantilla_data.xlsx'):
+    """
+    Crea una plantilla vacía de Excel estructurada con las 4 pestañas requeridas.
+    """
+    df_loc = pd.DataFrame({
+        'ID': [1],
+        'DESCRIPCION': ['Ejemplo Punto 1'],
+        'TIPO_ESTACION': ['BASE'],
+        'PROVINCIA': ['CARACAS'],
+        'MUNICIPIO': ['LIBERTADOR'],
+        'PARROQUIA': ['CATEDRAL'],
+        'NORTE_LATITUD': [10.488767],
+        'GRADOS_N': [10],
+        'MINUTOS_N': [29],
+        'SEGUNDOS_N': [19.56],
+        'HEMISFERIO_N': ['N'],
+        'ESTE_LONGITUD': [-66.889464],
+        'COLOR': ['blue'],
+        'TIPO_ICONO': ['Default'],
+        'RUTA_ICONO': [''],
+        'SOBRENOMBRE': ['Estación Base']
+    })
+
+    df_lin = pd.DataFrame({
+        'ID': [1],
+        'DESCRIPCION': ['Vértice 1'],
+        'TIPO_ESTACION': ['LINEA'],
+        'PROVINCIA': ['CARACAS'],
+        'MUNICIPIO': ['LIBERTADOR'],
+        'PARROQUIA': ['CATEDRAL'],
+        'NORTE_LATITUD': [10.488767],
+        'GRADOS_N': [10],
+        'MINUTOS_N': [29],
+        'SEGUNDOS_N': [19.56],
+        'HEMISFERIO_N': ['N'],
+        'ESTE_LONGITUD': [-66.889464]
+    })
+
+    df_cir = pd.DataFrame({
+        'ID': [1],
+        'DESCRIPCION': ['Centro Círculo 1'],
+        'TIPO_ESTACION': ['CIRCULO'],
+        'PROVINCIA': ['CARACAS'],
+        'MUNICIPIO': ['LIBERTADOR'],
+        'PARROQUIA': ['CATEDRAL'],
+        'NORTE_LATITUD': [10.488767],
+        'GRADOS_N': [10],
+        'MINUTOS_N': [29],
+        'SEGUNDOS_N': [19.56],
+        'HEMISFERIO_N': ['N'],
+        'ESTE_LONGITUD': [-66.889464],
+        'RADIO_METROS': [500.0]
+    })
+
+    df_rad = pd.DataFrame({
+        'ID': [1],
+        'DESCRIPCION': ['Punto Radiación 1'],
+        'TIPO_ESTACION': ['RADIACION'],
+        'PROVINCIA': ['CARACAS'],
+        'MUNICIPIO': ['LIBERTADOR'],
+        'PARROQUIA': ['CATEDRAL'],
+        'NORTE_LATITUD': [10.488767],
+        'GRADOS_N': [10],
+        'MINUTOS_N': [29],
+        'SEGUNDOS_N': [19.56],
+        'HEMISFERIO_N': ['N'],
+        'ESTE_LONGITUD': [-66.889464],
+        'ANGULO_GIRO': [0.0],
+        'DISTANCIA_KM': [2.5]
+    })
+
+    with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+        df_loc.to_excel(writer, sheet_name="LOCALIZACION", index=False)
+        df_lin.to_excel(writer, sheet_name="LINEA", index=False)
+        df_cir.to_excel(writer, sheet_name="CIRCULO", index=False)
+        df_rad.to_excel(writer, sheet_name="P_ANG_DIST", index=False)
+
+    return output_path
+
 def parse_excel_to_json(filepath):
     result = {
         'localizacion': [],
@@ -29,7 +108,7 @@ def parse_excel_to_json(filepath):
             try:
                 n = float(df_loc.iloc[i, 6])
                 e = float(df_loc.iloc[i, 11])
-                if pd.notna(n) and pd.notna(e):
+                if pd.notna(n) and pd.notna(e) and (abs(n) > 0.0001 or abs(e) > 0.0001):
                     color = str(df_loc.iloc[i, 12]) if df_loc.shape[1] > 12 and pd.notna(df_loc.iloc[i, 12]) else 'blue'
                     tipo = str(df_loc.iloc[i, 13]) if df_loc.shape[1] > 13 and pd.notna(df_loc.iloc[i, 13]) else 'Default'
                     dir_icon = str(df_loc.iloc[i, 14]) if df_loc.shape[1] > 14 and pd.notna(df_loc.iloc[i, 14]) else ''
@@ -49,7 +128,7 @@ def parse_excel_to_json(filepath):
             try:
                 n = float(df_lin.iloc[i, 6])
                 e = float(df_lin.iloc[i, 11])
-                if pd.notna(n) and pd.notna(e):
+                if pd.notna(n) and pd.notna(e) and (abs(n) > 0.0001 or abs(e) > 0.0001):
                     result['linea'].append({'norte': n, 'este': e})
             except Exception:
                 continue
@@ -63,7 +142,7 @@ def parse_excel_to_json(filepath):
             try:
                 n = float(df_cir.iloc[i, 6])
                 e = float(df_cir.iloc[i, 11])
-                if pd.notna(n) and pd.notna(e):
+                if pd.notna(n) and pd.notna(e) and (abs(n) > 0.0001 or abs(e) > 0.0001):
                     rad = float(df_cir.iloc[i, 12]) if df_cir.shape[1] > 12 and pd.notna(df_cir.iloc[i, 12]) else 100.0
                     result['circulo'].append({'norte': n, 'este': e, 'radio': rad})
             except Exception:
@@ -78,7 +157,7 @@ def parse_excel_to_json(filepath):
             try:
                 n = float(df_rad.iloc[i, 6])
                 e = float(df_rad.iloc[i, 11])
-                if pd.notna(n) and pd.notna(e):
+                if pd.notna(n) and pd.notna(e) and (abs(n) > 0.0001 or abs(e) > 0.0001):
                     ang = float(df_rad.iloc[i, 12]) if df_rad.shape[1] > 12 and pd.notna(df_rad.iloc[i, 12]) else 0.0
                     dist = float(df_rad.iloc[i, 13]) if df_rad.shape[1] > 13 and pd.notna(df_rad.iloc[i, 13]) else 1.0
                     result['radiacion'].append({'norte': n, 'este': e, 'angulo': ang, 'distancia': dist})
@@ -91,12 +170,13 @@ def parse_excel_to_json(filepath):
 
 @app.route('/')
 def index():
-    # Asegurar que se genere un mapa por defecto en la primera carga si no existe
     if not os.path.exists('Mapa.html'):
         excel_file = find_excel_file()
         if excel_file:
             data = parse_excel_to_json(excel_file)
             build_folium_map(data['localizacion'], data['linea'], data['circulo'], data['radiacion'], grid_step=1.0)
+        else:
+            build_folium_map([], [], [], [], grid_step=1.0)
     return render_template('index.html')
 
 @app.route('/Mapa.html')
@@ -140,7 +220,6 @@ def api_upload_excel():
     file.save(filename)
     data = parse_excel_to_json(filename)
     
-    # Auto-generar Mapa.html inmediatamente después de subir Excel
     build_folium_map(data['localizacion'], data['linea'], data['circulo'], data['radiacion'], grid_step=1.0)
 
     return jsonify({
@@ -171,6 +250,13 @@ def api_download_utm():
     if os.path.exists('resultsUTM.xlsx'):
         return send_file(os.path.abspath('resultsUTM.xlsx'), as_attachment=True)
     return jsonify({'status': 'error', 'message': 'El archivo resultsUTM.xlsx aún no se ha generado'}), 404
+
+@app.route('/api/download-template', methods=['GET'])
+def api_download_template():
+    template_path = os.path.abspath('plantilla_data.xlsx')
+    if not os.path.exists(template_path):
+        create_excel_template(template_path)
+    return send_file(template_path, as_attachment=True, download_name='plantilla_data.xlsx')
 
 def open_browser():
     time.sleep(1.2)
