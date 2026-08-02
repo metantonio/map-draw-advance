@@ -107,8 +107,8 @@ function bindEvents() {
   // Generar Mapa Manual
   document.getElementById('btnGenerateMap').addEventListener('click', () => generateMap(false));
 
-  // Exportar PNG y PDF
-  document.getElementById('btnExportPNG').addEventListener('click', exportMapPNG);
+  // Exportar PNG y PDF (Impresión con Cajetín de Plano)
+  document.getElementById('btnExportPNG').addEventListener('click', exportMapPDF);
   document.getElementById('btnExportPDF').addEventListener('click', exportMapPDF);
 
   // Modal de Créditos
@@ -387,30 +387,17 @@ async function generateMap(silent = false) {
   }
 }
 
-// Exportar Mapa como Imagen (PNG)
-function exportMapPNG() {
+// Exportar Mapa como PDF / Plano Técnico con Cajetín
+function exportMapPDF() {
   const iframe = document.getElementById('mapFrame');
   try {
-    const iframeWindow = iframe.contentWindow;
-    if (iframeWindow && iframeWindow.printMapPDF) {
-      iframeWindow.printMapPDF();
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
     } else {
       window.print();
     }
   } catch (e) {
     window.print();
   }
-}
-
-// Exportar Mapa como PDF
-function exportMapPDF() {
-  const element = document.getElementById('mapExportContainer');
-  const opt = {
-    margin:       [0.2, 0.2, 0.2, 0.2],
-    filename:     'Map_Draw_Advance_Report.pdf',
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true, logging: false },
-    jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
-  };
-  html2pdf().set(opt).from(element).save();
 }
