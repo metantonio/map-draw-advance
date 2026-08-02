@@ -108,6 +108,9 @@ function bindEvents() {
   // Generar Mapa Manual
   document.getElementById('btnGenerateMap').addEventListener('click', () => generateMap(false));
 
+  // Exportar Mapa como Imagen PNG
+  document.getElementById('btnExportPNG').addEventListener('click', exportMapPNG);
+
   // Abrir Modal de Configuración de Cajetín para Exportar PDF
   const cajModal = document.getElementById('cajetinModal');
   const chkIncludeCajetin = document.getElementById('chkIncludeCajetin');
@@ -472,6 +475,40 @@ async function generateMap(silent = false, cajetin_info = null) {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Generar Mapa';
+  }
+}
+
+// Exportar Mapa como Imagen (PNG) usando html2canvas
+async function exportMapPNG() {
+  const container = document.getElementById('mapExportContainer');
+  const iframe = document.getElementById('mapFrame');
+  if (!container || !iframe) return;
+
+  showLoading(true);
+
+  try {
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+    const targetElement = iframeDoc ? iframeDoc.body : container;
+
+    const canvas = await html2canvas(targetElement, {
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      scale: 2
+    });
+
+    const image = canvas.toDataURL("image/png");
+    const link = document.createElement('a');
+    link.href = image;
+    link.download = `Mapa_Draw_Advance_${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (err) {
+    console.warn("Fallo al capturar canvas PNG, invocando cuadro de diálogo de mapa:", err);
+    window.print();
+  } finally {
+    showLoading(false);
   }
 }
 
