@@ -354,6 +354,10 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None, puntos_caj
             <span class="cajetin-label">FECHA DE EMISIÓN</span>
             <span class="cajetin-val" id="cj-val-fecha">{cajetin_info.get('fecha', time.strftime("%d/%m/%Y"))}</span>
           </td>
+          <td>
+            <span class="cajetin-label">ESCALA DEL PLANO</span>
+            <span class="cajetin-val" id="cj-val-escala">{cajetin_info.get('escala', '1:250000')}</span>
+          </td>
         </tr>
         <tr>
           <td colspan="2">

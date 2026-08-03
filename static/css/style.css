@@ -131,6 +131,59 @@ body {
   padding: 16px;
   flex: 1;
   height: calc(100vh - 65px);
+  transition: grid-template-columns 0.35s cubic-bezier(0.4, 0, 0.2, 1), gap 0.35s ease;
+  position: relative;
+}
+
+.main-layout.sidebar-collapsed {
+  grid-template-columns: 0px 1fr;
+  gap: 0px;
+}
+
+.editor-panel {
+  transition: opacity 0.25s ease, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: left center;
+}
+
+.main-layout.sidebar-collapsed .editor-panel {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  overflow: hidden;
+  transform: translateX(-100%);
+  border: none;
+}
+
+.map-viewport-container {
+  position: relative;
+}
+
+/* Floating Expand Toggle Button when Sidebar is Collapsed */
+.sidebar-floating-toggle {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 1000;
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.sidebar-floating-toggle:hover {
+  background-color: #334155;
+  border-color: var(--accent-blue);
+  color: #38bdf8;
+  transform: scale(1.04);
 }
 
 .panel {

@@ -561,6 +561,36 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
         }}
     }}
 
+    function getLeafletMapScale(mapObj) {{
+        if (!mapObj) {{
+            for (var key in window) {{
+                try {{
+                    if (window[key] && window[key] instanceof L.Map) {{
+                        mapObj = window[key];
+                        break;
+                    }}
+                }} catch(e) {{}}
+            }}
+        }}
+        if (!mapObj) return "1:250000";
+        try {{
+            var center = mapObj.getCenter();
+            var zoom = mapObj.getZoom();
+            var earthM = 40075016.686;
+            var latRad = center.lat * Math.PI / 180;
+            var metersPerPx = (earthM * Math.cos(latRad)) / (256 * Math.pow(2, zoom));
+            var pxSizeM = 0.000264583;
+            var rawScale = metersPerPx / pxSizeM;
+            var rounded = Math.round(rawScale / 100) * 100;
+            if (rounded >= 10000) {{
+                rounded = Math.round(rounded / 1000) * 1000;
+            }}
+            return "1:" + rounded;
+        }} catch(e) {{
+            return "1:250000";
+        }}
+    }}
+
     var dynamicGridLayerGroup = null;
 
     function fixLeafletMapSize() {{
@@ -585,6 +615,12 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
             }} catch(e) {{}}
         }}
         if (!mapObj) return;
+
+        // Actualizar Escala en vivo en el Cajetín si no es personalizada
+        var elEscala = document.getElementById('cj-val-escala');
+        if (elEscala && (!elEscala.getAttribute('data-custom') || elEscala.getAttribute('data-custom') === 'false')) {{
+            elEscala.textContent = getLeafletMapScale(mapObj);
+        }}
 
         if (!dynamicGridLayerGroup) {{
             dynamicGridLayerGroup = L.layerGroup().addTo(mapObj);

@@ -113,6 +113,49 @@ function bindEvents() {
     });
   }
 
+  // Control para Ocultar / Mostrar el Menú Lateral de Coordenadas
+  const mainLayout = document.querySelector('.main-layout');
+  const btnToggleSidebar = document.getElementById('btnToggleSidebar');
+  const btnCollapseSidebar = document.getElementById('btnCollapseSidebar');
+  const btnRestoreSidebar = document.getElementById('btnRestoreSidebar');
+
+  function toggleSidebar(collapse) {
+    if (!mainLayout) return;
+    const shouldCollapse = collapse !== undefined ? collapse : !mainLayout.classList.contains('sidebar-collapsed');
+    
+    if (shouldCollapse) {
+      mainLayout.classList.add('sidebar-collapsed');
+      if (btnToggleSidebar) {
+        btnToggleSidebar.innerHTML = '<i class="fa-solid fa-table-columns"></i> Mostrar Menú';
+        btnToggleSidebar.classList.add('btn-primary');
+        btnToggleSidebar.classList.remove('btn-outline');
+      }
+      if (btnRestoreSidebar) btnRestoreSidebar.style.display = 'flex';
+    } else {
+      mainLayout.classList.remove('sidebar-collapsed');
+      if (btnToggleSidebar) {
+        btnToggleSidebar.innerHTML = '<i class="fa-solid fa-table-columns"></i> Ocultar Menú';
+        btnToggleSidebar.classList.remove('btn-primary');
+        btnToggleSidebar.classList.add('btn-outline');
+      }
+      if (btnRestoreSidebar) btnRestoreSidebar.style.display = 'none';
+    }
+
+    // Notificar al iframe del mapa para que invalide su tamaño y ocupe el 100% de la pantalla
+    setTimeout(() => {
+      try {
+        const iframe = document.getElementById('mapFrame');
+        if (iframe && iframe.contentWindow && iframe.contentWindow.fixLeafletMapSize) {
+          iframe.contentWindow.fixLeafletMapSize();
+        }
+      } catch (err) {}
+    }, 360);
+  }
+
+  if (btnToggleSidebar) btnToggleSidebar.addEventListener('click', () => toggleSidebar());
+  if (btnCollapseSidebar) btnCollapseSidebar.addEventListener('click', () => toggleSidebar(true));
+  if (btnRestoreSidebar) btnRestoreSidebar.addEventListener('click', () => toggleSidebar(false));
+
   // Generar Mapa Manual
   document.getElementById('btnGenerateMap').addEventListener('click', () => generateMap(false));
 
@@ -135,6 +178,18 @@ function bindEvents() {
       modalSys.value = navSys.value;
     }
     
+    // Obtener la Escala Real calculada del mapa Leaflet
+    try {
+      const iframe = document.getElementById('mapFrame');
+      if (iframe && iframe.contentWindow && typeof iframe.contentWindow.getLeafletMapScale === 'function') {
+        document.getElementById('caj_escala').value = iframe.contentWindow.getLeafletMapScale();
+      } else {
+        document.getElementById('caj_escala').value = '1:250000';
+      }
+    } catch(e) {
+      document.getElementById('caj_escala').value = '1:250000';
+    }
+
     cajModal.style.display = 'flex';
   });
 
@@ -165,6 +220,7 @@ function bindEvents() {
     const caj_autor = document.getElementById('caj_autor').value || 'Antonio Martínez (@metantonio)';
     const caj_revisado = document.getElementById('caj_revisado').value || 'Ing. Coordinador';
     const caj_fecha = document.getElementById('caj_fecha').value || new Date().toLocaleDateString();
+    const caj_escala = document.getElementById('caj_escala').value || '1:250000';
     
     let defaultNotas = selectedSys === 'utm' ? 'SISTEMA: UTM Transverse Mercator (Proyectado)' : 'SISTEMA: WGS-84 (Geográfico Lat/Lon)';
     const caj_notas = document.getElementById('caj_notas').value || defaultNotas;
@@ -200,6 +256,9 @@ function bindEvents() {
 
         const elFecha = iframeDoc.getElementById('cj-val-fecha');
         if (elFecha) elFecha.textContent = caj_fecha;
+
+        const elEscala = iframeDoc.getElementById('cj-val-escala');
+        if (elEscala) elEscala.textContent = caj_escala;
 
         const elNotas = iframeDoc.getElementById('cj-val-notas');
         if (elNotas) elNotas.textContent = caj_notas;
