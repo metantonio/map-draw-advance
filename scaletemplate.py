@@ -105,17 +105,62 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None, puntos_caj
         border-bottom-color: #1e293b !important;
       }}
 
+      /* ESTILOS ETIQUETAS DE BORDES DE GRILLA */
+      .grid-edge-marker {{
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        z-index: 99999 !important;
+      }}
+
+      .grid-edge-label {{
+        background-color: #0f172a !important;
+        color: #ffffff !important;
+        border: 1.5px solid #38bdf8 !important;
+        border-radius: 4px !important;
+        font-family: Consolas, Monaco, monospace !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        padding: 3px 6px !important;
+        white-space: nowrap !important;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.4) !important;
+        pointer-events: none !important;
+        display: inline-block !important;
+      }}
+
+      .grid-edge-top {{ transform: translate(-50%, -100%); margin-top: -2px; }}
+      .grid-edge-bottom {{ transform: translate(-50%, 0%); margin-top: 2px; }}
+      .grid-edge-left {{ transform: translate(-100%, -50%); margin-left: -2px; }}
+      .grid-edge-right {{ transform: translate(0%, -50%); margin-left: 2px; }}
+
       /* ESTILOS DE IMPRESIÓN Y EXPORTACIÓN PDF */
       @media print {{
+        * {{
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }}
+
         @page {{
           size: A4 landscape;
-          margin: 8mm;
+          margin: 6mm;
         }}
 
         body {{
           background: white !important;
           margin: 0 !important;
           padding: 0 !important;
+        }}
+
+        .leaflet-container {{
+          background: #ffffff !important;
+        }}
+
+        .leaflet-tile {{
+          opacity: 1 !important;
+          visibility: visible !important;
+          filter: none !important;
         }}
 
         /* ETIQUETAS VISIBLES E IMPRESAS DEBAJO DE LOS MARCADORES */
@@ -131,14 +176,32 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None, puntos_caj
           box-shadow: none !important;
         }}
 
-        /* ELIMINAR FONDO BLANCO Y SOMBRAS EN ICONOS DE MARCADORES */
+        /* ETIQUETAS DE BORDES DE GRILLA (SIEMPRE VISIBLES CON FONDO BLANCO Y BORDE NEGRO) */
+        .grid-edge-label {{
+          display: inline-block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          background: #ffffff !important;
+          background-color: #ffffff !important;
+          color: #000000 !important;
+          border: 2px solid #000000 !important;
+          border-radius: 3px !important;
+          font-weight: 800 !important;
+          font-size: 10px !important;
+          padding: 2px 6px !important;
+          z-index: 9999999 !important;
+          box-shadow: none !important;
+          white-space: nowrap !important;
+        }}
+
+        /* ELIMINAR FONDO BLANCO Y SOMBRAS EN ICONOS DE MARCADORES (EXCLUYENDO ETIQUETAS DE GRILLA) */
         .leaflet-marker-shadow {{
           display: none !important;
         }}
 
-        .leaflet-marker-icon,
+        .leaflet-marker-icon:not(.grid-edge-label),
         .awesome-marker,
-        .leaflet-div-icon,
+        .leaflet-div-icon:not(.grid-edge-label),
         .awesome-marker i {{
           background: transparent !important;
           border: none !important;

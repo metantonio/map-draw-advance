@@ -26,9 +26,9 @@ def formatoMouse(my_map):
         lng_formatter=formatter,
     ).add_to(my_map)
 
-def agregar_grilla(group, grid_step=1.0, bounds=None):
+def agregar_grilla(group, grid_step=1.0, bounds=None, coord_system='wgs84'):
     """
-    Genera una grilla de latitud y longitud visible, con líneas contrastadas y etiquetas de coordenadas.
+    Genera una grilla visible con líneas contrastadas y etiquetas de coordenadas en los bordes del plano (WGS-84 o UTM).
     """
     try:
         step = float(grid_step) if float(grid_step) > 0 else 1.0
@@ -36,54 +36,202 @@ def agregar_grilla(group, grid_step=1.0, bounds=None):
         step = 1.0
 
     if bounds:
-        min_lat = max(-89.9, bounds[0][0] - step * 4)
-        max_lat = min(89.9, bounds[1][0] + step * 4)
-        min_lon = max(-179.9, bounds[0][1] - step * 4)
-        max_lon = min(179.9, bounds[1][1] + step * 4)
+        min_lat = max(-89.9, bounds[0][0])
+        max_lat = min(89.9, bounds[1][0])
+        min_lon = max(-179.9, bounds[0][1])
+        max_lon = min(179.9, bounds[1][1])
     else:
         min_lat, max_lat = -85.0, 85.0
         min_lon, max_lon = -180.0, 180.0
 
-    # Asegurar paso alineado a valores enteros de la grilla
-    start_lat = math.floor(min_lat / step) * step
-    end_lat = math.ceil(max_lat / step) * step
-    start_lon = math.floor(min_lon / step) * step
-    end_lon = math.ceil(max_lon / step) * step
+    system = str(coord_system).lower()
 
-    lat_steps = np.arange(start_lat, end_lat + step * 0.5, step)
-    lon_steps = np.arange(start_lon, end_lon + step * 0.5, step)
+    if system == 'utm':
+        # Grilla UTM
+        lat_ctr = (min_lat + max_lat) / 2.0
+        lon_ctr = (min_lon + max_lon) / 2.0
+        n_ctr, e_ctr, huso = gms2utm(lat_ctr, lon_ctr)
 
-    max_lines = 300
-    if len(lat_steps) > max_lines:
-        lat_steps = lat_steps[::int(len(lat_steps)/max_lines) + 1]
-    if len(lon_steps) > max_lines:
-        lon_steps = lon_steps[::int(len(lon_steps)/max_lines) + 1]
+        n_sw, e_sw, _ = gms2utm(min_lat, min_lon)
+        n_ne, e_ne, _ = gms2utm(max_lat, max_lon)
 
-    # Líneas de Latitud (Horizontales)
-    for lat in lat_steps:
-        lat_val = round(float(lat), 6)
-        folium.PolyLine(
-            [[lat_val, start_lon], [lat_val, end_lon]],
-            weight=1.5,
-            color="#2563eb",
-            opacity=0.6,
-            dash_array="4, 4",
-            tooltip=f"Latitud: {lat_val:.4f}º"
-        ).add_to(group)
+        min_e, max_e = min(e_sw, e_ne), max(e_sw, e_ne)
+        min_n, max_n = min(n_sw, n_ne), max(n_sw, n_ne)
 
-    # Líneas de Longitud (Verticales)
-    for lon in lon_steps:
-        lon_val = round(float(lon), 6)
-        folium.PolyLine(
-            [[start_lat, lon_val], [end_lat, lon_val]],
-            weight=1.5,
-            color="#2563eb",
-            opacity=0.6,
-            dash_array="4, 4",
-            tooltip=f"Longitud: {lon_val:.4f}º"
-        ).add_to(group)
+        if step <= 0.001: step_m = 100
+        elif step <= 0.005: step_m = 500
+        elif step <= 0.01: step_m = 1000
+        elif step <= 0.05: step_m = 5000
+        elif step <= 0.1: step_m = 10000
+        elif step <= 0.5: step_m = 50000
+        elif step <= 1.0: step_m = 100000
+        else: step_m = 500000
 
-def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion, grid_step=1.0, show_perimeter_markers=False, cajetin_info=None, output_file='Mapa.html'):
+        start_e = math.floor(min_e / step_m) * step_m
+        end_e = math.ceil(max_e / step_m) * step_m
+        start_n = math.floor(min_n / step_m) * step_m
+        end_n = math.ceil(max_n / step_m) * step_m
+
+        e_steps = np.arange(start_e, end_e + step_m * 0.5, step_m)
+        n_steps = np.arange(start_n, end_n + step_m * 0.5, step_m)
+
+        max_l = 100
+        if len(e_steps) > max_l: e_steps = e_steps[::int(len(e_steps)/max_l) + 1]
+        if len(n_steps) > max_l: n_steps = n_steps[::int(len(n_steps)/max_l) + 1]
+
+        # Líneas Verticales UTM (Este)
+        for e_val in e_steps:
+            lat1, lon1 = utm2gms(start_n, e_val, huso)
+            lat2, lon2 = utm2gms(end_n, e_val, huso)
+
+            folium.PolyLine(
+                [[lat1, lon1], [lat2, lon2]],
+                weight=1.5,
+                color="#059669",
+                opacity=0.6,
+                dash_array="4, 4",
+                tooltip=f"UTM Este: {e_val:,.0f} m (Huso {huso})"
+            ).add_to(group)
+
+            # Etiqueta en Borde Superior
+            folium.Marker(
+                [lat2, lon2],
+                icon=folium.DivIcon(
+                    class_name="grid-edge-marker",
+                    icon_size=None,
+                    html=f'<div class="grid-edge-label grid-edge-top">E: {e_val:,.0f} m</div>'
+                )
+            ).add_to(group)
+
+            # Etiqueta en Borde Inferior
+            folium.Marker(
+                [lat1, lon1],
+                icon=folium.DivIcon(
+                    class_name="grid-edge-marker",
+                    icon_size=None,
+                    html=f'<div class="grid-edge-label grid-edge-bottom">E: {e_val:,.0f} m</div>'
+                )
+            ).add_to(group)
+
+        # Líneas Horizontales UTM (Norte)
+        for n_val in n_steps:
+            lat1, lon1 = utm2gms(n_val, start_e, huso)
+            lat2, lon2 = utm2gms(n_val, end_e, huso)
+
+            folium.PolyLine(
+                [[lat1, lon1], [lat2, lon2]],
+                weight=1.5,
+                color="#059669",
+                opacity=0.6,
+                dash_array="4, 4",
+                tooltip=f"UTM Norte: {n_val:,.0f} m (Huso {huso})"
+            ).add_to(group)
+
+            # Etiqueta en Borde Izquierdo
+            folium.Marker(
+                [lat1, lon1],
+                icon=folium.DivIcon(
+                    class_name="grid-edge-marker",
+                    icon_size=None,
+                    html=f'<div class="grid-edge-label grid-edge-left">N: {n_val:,.0f} m</div>'
+                )
+            ).add_to(group)
+
+            # Etiqueta en Borde Derecho
+            folium.Marker(
+                [lat2, lon2],
+                icon=folium.DivIcon(
+                    class_name="grid-edge-marker",
+                    icon_size=None,
+                    html=f'<div class="grid-edge-label grid-edge-right">N: {n_val:,.0f} m</div>'
+                )
+            ).add_to(group)
+
+    else:
+        # Grilla WGS-84
+        start_lat = math.floor(min_lat / step) * step
+        end_lat = math.ceil(max_lat / step) * step
+        start_lon = math.floor(min_lon / step) * step
+        end_lon = math.ceil(max_lon / step) * step
+
+        lat_steps = np.arange(start_lat, end_lat + step * 0.5, step)
+        lon_steps = np.arange(start_lon, end_lon + step * 0.5, step)
+
+        max_lines = 100
+        if len(lat_steps) > max_lines: lat_steps = lat_steps[::int(len(lat_steps)/max_lines) + 1]
+        if len(lon_steps) > max_lines: lon_steps = lon_steps[::int(len(lon_steps)/max_lines) + 1]
+
+        # Líneas de Latitud (Horizontales)
+        for lat in lat_steps:
+            lat_val = round(float(lat), 6)
+            folium.PolyLine(
+                [[lat_val, start_lon], [lat_val, end_lon]],
+                weight=1.5,
+                color="#2563eb",
+                opacity=0.6,
+                dash_array="4, 4",
+                tooltip=f"Latitud: {lat_val:.4f}º"
+            ).add_to(group)
+
+            hemi_n = 'N' if lat_val >= 0 else 'S'
+            lbl_lat = f"{abs(lat_val):.4f}º {hemi_n}"
+
+            # Etiqueta Borde Izquierdo
+            folium.Marker(
+                [lat_val, start_lon],
+                icon=folium.DivIcon(
+                    class_name="grid-edge-marker",
+                    icon_size=None,
+                    html=f'<div class="grid-edge-label grid-edge-left">{lbl_lat}</div>'
+                )
+            ).add_to(group)
+
+            # Etiqueta Borde Derecho
+            folium.Marker(
+                [lat_val, end_lon],
+                icon=folium.DivIcon(
+                    class_name="grid-edge-marker",
+                    icon_size=None,
+                    html=f'<div class="grid-edge-label grid-edge-right">{lbl_lat}</div>'
+                )
+            ).add_to(group)
+
+        # Líneas de Longitud (Verticales)
+        for lon in lon_steps:
+            lon_val = round(float(lon), 6)
+            folium.PolyLine(
+                [[start_lat, lon_val], [end_lat, lon_val]],
+                weight=1.5,
+                color="#2563eb",
+                opacity=0.6,
+                dash_array="4, 4",
+                tooltip=f"Longitud: {lon_val:.4f}º"
+            ).add_to(group)
+
+            hemi_e = 'E' if lon_val >= 0 else 'W'
+            lbl_lon = f"{abs(lon_val):.4f}º {hemi_e}"
+
+            # Etiqueta Borde Superior
+            folium.Marker(
+                [end_lat, lon_val],
+                icon=folium.DivIcon(
+                    class_name="grid-edge-marker",
+                    icon_size=None,
+                    html=f'<div class="grid-edge-label grid-edge-top">{lbl_lon}</div>'
+                )
+            ).add_to(group)
+
+            # Etiqueta Borde Inferior
+            folium.Marker(
+                [start_lat, lon_val],
+                icon=folium.DivIcon(
+                    class_name="grid-edge-marker",
+                    icon_size=None,
+                    html=f'<div class="grid-edge-label grid-edge-bottom">{lbl_lon}</div>'
+                )
+            ).add_to(group)
+
+def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion, grid_step=1.0, coord_system='wgs84', show_perimeter_markers=False, cajetin_info=None, output_file='Mapa.html'):
     """
     Construye y guarda el mapa Folium con marcadores de perímetro opcionales, etiquetas visibles bajo marcadores y datos del Cajetín de Plano.
     """
@@ -223,7 +371,8 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     fg_perimetro = folium.FeatureGroup(name="🚩 Perímetro RF (Curva Suave)", show=True)
     fg_perimetro_marcadores = folium.FeatureGroup(name="📌 Vértices Perímetro RF (Marcadores)", show=show_perimeter_markers)
     fg_heatmap = folium.FeatureGroup(name="🔥 Patrón de Radiación (Heatmap RF)")
-    fg_grilla = folium.FeatureGroup(name=f"🌐 Grilla Lat/Lon ({grid_step}º)", show=True)
+    grid_sys_lbl = "UTM (m)" if coord_system.lower() == "utm" else "WGS-84 (º)"
+    fg_grilla = folium.FeatureGroup(name=f"🌐 Grilla {grid_sys_lbl}", show=True)
 
     # 1. Puntos Localización (CON ETIQUETAS PERMANENTES VISIBLES DEBAJO DEL MARCADOR)
     if coordenadas:
@@ -360,8 +509,8 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
         bounds = [south_west, north_east]
         myMap.fit_bounds(bounds)
 
-    # Generar Grilla Dinámica con contraste mejorado
-    agregar_grilla(fg_grilla, grid_step=grid_step, bounds=bounds)
+    # Generar Grilla Dinámica con contraste mejorado y etiquetas de borde
+    agregar_grilla(fg_grilla, grid_step=grid_step, bounds=bounds, coord_system=coord_system)
 
     # Añadir FeatureGroups al mapa
     fg_localizacion.add_to(myMap)

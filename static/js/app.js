@@ -63,6 +63,7 @@ function bindEvents() {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('grid_step', document.getElementById('gridStepSelect').value);
+    formData.append('coord_system', document.getElementById('coordSystemSelect').value);
     formData.append('show_perimeter_markers', document.getElementById('chkShowPerimeterMarkers').checked);
 
     try {
@@ -83,6 +84,13 @@ function bindEvents() {
       showLoading(false);
       alert('❌ Error al subir archivo Excel: ' + err);
     }
+  });
+
+  // Cambio de Sistema de Coordenadas -> Auto Actualizar
+  document.getElementById('coordSystemSelect').addEventListener('change', (e) => {
+    const modalSelect = document.getElementById('modal_coord_system');
+    if (modalSelect) modalSelect.value = e.target.value;
+    triggerAutoUpdateMap(true);
   });
 
   // Cambio de Grilla -> Auto Actualizar
@@ -120,6 +128,13 @@ function bindEvents() {
     const now = new Date();
     const formattedDate = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
     document.getElementById('caj_fecha').value = formattedDate;
+    
+    const navSys = document.getElementById('coordSystemSelect');
+    const modalSys = document.getElementById('modal_coord_system');
+    if (navSys && modalSys) {
+      modalSys.value = navSys.value;
+    }
+    
     cajModal.style.display = 'flex';
   });
 
@@ -132,9 +147,17 @@ function bindEvents() {
   document.getElementById('btnCancelCajetin').addEventListener('click', () => cajModal.style.display = 'none');
 
   // Confirmar Impresión de PDF actualizando el Cajetín en vivo (o bien ocultándolo si es opcional)
-  document.getElementById('btnConfirmPrintPDF').addEventListener('click', () => {
+  document.getElementById('btnConfirmPrintPDF').addEventListener('click', async () => {
     cajModal.style.display = 'none';
     const includeCajetin = chkIncludeCajetin.checked;
+
+    const selectedSys = document.getElementById('modal_coord_system').value;
+    const currentNavSys = document.getElementById('coordSystemSelect').value;
+    
+    if (selectedSys !== currentNavSys) {
+      document.getElementById('coordSystemSelect').value = selectedSys;
+      await generateMap(true);
+    }
     
     const caj_titulo = document.getElementById('caj_titulo').value || 'MAP DRAW ADVANCE v2.0 — PLANO GEOESPACIAL';
     const caj_proyecto = document.getElementById('caj_proyecto').value || 'Levantamiento de Coordenadas & Patrón de Radiación RF';
@@ -142,7 +165,9 @@ function bindEvents() {
     const caj_autor = document.getElementById('caj_autor').value || 'Antonio Martínez (@metantonio)';
     const caj_revisado = document.getElementById('caj_revisado').value || 'Ing. Coordinador';
     const caj_fecha = document.getElementById('caj_fecha').value || new Date().toLocaleDateString();
-    const caj_notas = document.getElementById('caj_notas').value || 'WGS-84 / UTM Transverse Mercator';
+    
+    let defaultNotas = selectedSys === 'utm' ? 'SISTEMA: UTM Transverse Mercator (Proyectado)' : 'SISTEMA: WGS-84 (Geográfico Lat/Lon)';
+    const caj_notas = document.getElementById('caj_notas').value || defaultNotas;
 
     // Actualizar directamente el DOM del iFrame sin reiniciar Leaflet
     const iframe = document.getElementById('mapFrame');
@@ -186,7 +211,7 @@ function bindEvents() {
     // Disparar la impresión inmediata conservando encuadre, zoom y capa activa
     setTimeout(() => {
       exportMapPDF();
-    }, 150);
+    }, 200);
   });
 
   // Modal de Créditos
@@ -448,6 +473,7 @@ async function generateMap(silent = false, cajetin_info = null) {
   // Recopilar valores más recientes del DOM
   collectCurrentDataFromDOM();
   const grid_step = document.getElementById('gridStepSelect').value;
+  const coord_system = document.getElementById('coordSystemSelect').value;
   const show_perimeter_markers = document.getElementById('chkShowPerimeterMarkers').checked;
 
   try {
@@ -457,6 +483,7 @@ async function generateMap(silent = false, cajetin_info = null) {
       body: JSON.stringify({
         ...currentData,
         grid_step: grid_step,
+        coord_system: coord_system,
         show_perimeter_markers: show_perimeter_markers,
         cajetin_info: cajetin_info
       })
@@ -494,7 +521,8 @@ async function exportMapPNG() {
       useCORS: true,
       allowTaint: true,
       logging: false,
-      scale: 2
+      scale: 3,
+      imageTimeout: 0
     });
 
     const image = canvas.toDataURL("image/png");
@@ -517,6 +545,9 @@ function exportMapPDF() {
   const iframe = document.getElementById('mapFrame');
   try {
     if (iframe && iframe.contentWindow) {
+      if (typeof iframe.contentWindow.fixLeafletMapSize === 'function') {
+        iframe.contentWindow.fixLeafletMapSize();
+      }
       iframe.contentWindow.focus();
       iframe.contentWindow.print();
     } else {

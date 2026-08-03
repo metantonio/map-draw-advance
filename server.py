@@ -270,8 +270,9 @@ def api_upload_excel():
         data = parse_excel_to_json(filename)
         
         grid_step = float(request.form.get('grid_step', 1.0))
+        coord_system = str(request.form.get('coord_system', 'wgs84')).lower()
         show_markers = str(request.form.get('show_perimeter_markers', 'false')).lower() == 'true'
-        build_folium_map(data['localizacion'], data['linea'], data['circulo'], data['radiacion'], grid_step=grid_step, show_perimeter_markers=show_markers)
+        build_folium_map(data['localizacion'], data['linea'], data['circulo'], data['radiacion'], grid_step=grid_step, coord_system=coord_system, show_perimeter_markers=show_markers)
 
         return jsonify({
             'status': 'ok',
@@ -292,12 +293,13 @@ def api_generate_map():
         circulo = req.get('circulo', [])
         radiacion = req.get('radiacion', [])
         grid_step = float(req.get('grid_step', 1.0))
+        coord_system = str(req.get('coord_system', 'wgs84')).lower()
         show_markers = bool(req.get('show_perimeter_markers', False))
         cajetin_info = req.get('cajetin_info', None)
 
         out_file = build_folium_map(
             localizacion, linea, circulo, radiacion,
-            grid_step=grid_step, show_perimeter_markers=show_markers,
+            grid_step=grid_step, coord_system=coord_system, show_perimeter_markers=show_markers,
             cajetin_info=cajetin_info, output_file='Mapa.html'
         )
         return jsonify({
