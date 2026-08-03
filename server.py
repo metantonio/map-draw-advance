@@ -208,7 +208,14 @@ def parse_excel_to_json(filepath):
                             if (abs(n) > 0.0001 or abs(e) > 0.0001):
                                 ang = float(get_col_val(df_rad, i, ['ANGULO_GIRO', 'ANGULO', 'ANG'], 12) or 0.0)
                                 dist = float(get_col_val(df_rad, i, ['DISTANCIA_KM', 'DISTANCIA', 'DIST'], 13) or 1.0)
-                                result['radiacion'].append({'norte': n, 'este': e, 'angulo': ang, 'distancia': dist})
+                                etiq_val = get_col_val(df_rad, i, ['ETIQUETA', 'PATRON', 'NOMBRE', 'ETIQUETA_PATRON'], 14)
+                                col_val = get_col_val(df_rad, i, ['COLOR', 'COLOR_PATRON'], 15)
+                                item_rad = {'norte': n, 'este': e, 'angulo': ang, 'distancia': dist}
+                                if etiq_val is not None and str(etiq_val).strip() != '' and str(etiq_val).lower() != 'nan':
+                                    item_rad['etiqueta'] = str(etiq_val).strip()
+                                if col_val is not None and str(col_val).strip() != '' and str(col_val).lower() != 'nan':
+                                    item_rad['color'] = str(col_val).strip()
+                                result['radiacion'].append(item_rad)
                     except Exception:
                         continue
         except Exception as e:

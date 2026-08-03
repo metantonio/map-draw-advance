@@ -256,11 +256,6 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     coordenadasC = [[row['norte'], row['este']] for row in data_circulo]
     radio = [row.get('radio', 100.0) for row in data_circulo]
 
-    norte_GMSP = [row['norte'] for row in data_radiacion]
-    este_GMSP = [row['este'] for row in data_radiacion]
-    anguloP = [row.get('angulo', 0.0) for row in data_radiacion]
-    distanciaP = [row.get('distancia', 1.0) for row in data_radiacion]
-
     # Transformación a UTM
     df_loc, df_lin, df_cir, df_rad_g, df_rad_utm = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
@@ -285,33 +280,115 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
         n_utm, e_utm, h_utm = zip(*[gms2utm(n, e) for n, e in zip(norte_GMSC, este_GMSC)])
         df_cir = pd.DataFrame({'Norte': n_utm, 'Este': e_utm, 'Huso': h_utm})
 
-    norte_GMSP2, este_GMSP2, dataHeatMap = [], [], []
-    if norte_GMSP:
-        norte_GMSP2 = [0]*len(norte_GMSP)
-        este_GMSP2 = [0]*len(este_GMSP)
-        for i in range(len(norte_GMSP)):
-            norte_GMSP2[i], este_GMSP2[i] = distanceAndAngle(norte_GMSP[i], este_GMSP[i], anguloP[i], distanciaP[i])
-            
-            # Centro transmisor a 100% (1.0)
-            dataHeatMap.append([norte_GMSP[i], este_GMSP[i], 1.0])
+    # Agrupar data_radiacion por Patrón
+    PALETA_PATRONES = ['#8e44ad', '#e74c3c', '#2980b9', '#27ae60', '#e67e22', '#16a085', '#d35400', '#2c3e50', '#f39c12']
+    patrones_dict = {}
 
-            # Interpolación concéntrica de decaimiento RF
-            auxlist = distanceAndAngleInterpolation(norte_GMSP[i], este_GMSP[i], anguloP[i], distanciaP[i])
+    for row in data_radiacion:
+        n_c = float(row.get('norte', 0.0))
+        e_c = float(row.get('este', 0.0))
+        ang = float(row.get('angulo', 0.0))
+        dist = float(row.get('distancia', 1.0))
+        etiq = str(row.get('etiqueta', '')).strip()
+        color_user = str(row.get('color', '')).strip()
+
+        # Buscar si ya existe un patrón coincidente (mismo centro y misma etiqueta si especificada)
+        found_key = None
+        for pkey, pval in patrones_dict.items():
+            same_center = (abs(pval['centro'][0] - n_c) < 0.0001 and abs(pval['centro'][1] - e_c) < 0.0001)
+            same_label = (pval['raw_etiqueta'] == etiq) if etiq else True
+            
+            if same_center and same_label:
+                found_key = pkey
+                break
+
+        if found_key:
+            key = found_key
+        else:
+            p_idx = len(patrones_dict) + 1
+            key = f"patron_{p_idx}"
+            display_label = etiq if etiq else f"Patrón {p_idx}"
+            color = color_user if color_user else PALETA_PATRONES[(p_idx - 1) % len(PALETA_PATRONES)]
+
+            patrones_dict[key] = {
+                'key': key,
+                'etiqueta': display_label,
+                'raw_etiqueta': etiq,
+                'color': color,
+                'centro': [n_c, e_c],
+                'angulos': [],
+                'distancias': []
+            }
+
+        if color_user:
+            patrones_dict[key]['color'] = color_user
+
+        patrones_dict[key]['angulos'].append(ang)
+        patrones_dict[key]['distancias'].append(dist)
+
+    norte_GMSP2, este_GMSP2, dataHeatMap = [], [], []
+    patrones_cajetin = []
+
+    all_rad_n2, all_rad_e2, all_rad_ang, all_rad_dist, all_rad_patron = [], [], [], [], []
+
+    for pkey, p in patrones_dict.items():
+        n_c, e_c = p['centro'][0], p['centro'][1]
+        max_d = max(p['distancias']) if p['distancias'] else 0.0
+
+        if abs(n_c) > 0.0001 and abs(e_c) > 0.0001:
+            n_utm, e_utm, h_utm = gms2utm(n_c, e_c)
+            patrones_cajetin.append({
+                'etiqueta': p['etiqueta'],
+                'color': p['color'],
+                'wgs84': f"{n_c:.5f}º, {e_c:.5f}º",
+                'utm': f"{n_utm:.0f} N, {e_utm:.0f} E ({h_utm})",
+                'max_dist': f"{max_d:.2f} km"
+            })
+
+        for i in range(len(p['angulos'])):
+            a = p['angulos'][i]
+            d = p['distancias'][i]
+            n2, e2 = distanceAndAngle(n_c, e_c, a, d)
+            norte_GMSP2.append(n2)
+            este_GMSP2.append(e2)
+            all_rad_n2.append(n2)
+            all_rad_e2.append(e2)
+            all_rad_ang.append(a)
+            all_rad_dist.append(d)
+            all_rad_patron.append(p['etiqueta'])
+
+            # Heatmap centro e interpolaciones
+            dataHeatMap.append([n_c, e_c, 1.0])
+            auxlist = distanceAndAngleInterpolation(n_c, e_c, a, d)
             for pt in auxlist:
                 dataHeatMap.append([pt[0], pt[1], pt[2]])
 
-        df_rad_g = pd.DataFrame({'Norte Latitud(deg)': norte_GMSP2, 'Este Longitud(deg)': este_GMSP2, 'Angulo (deg)': anguloP, 'Distancia (km)': distanciaP})
-        n_utm, e_utm, h_utm = zip(*[gms2utm(n, e) for n, e in zip(norte_GMSP2, este_GMSP2)])
-        df_rad_utm = pd.DataFrame({'Norte': n_utm, 'Este': e_utm, 'Huso': h_utm, 'Angulo (deg)': anguloP, 'Distancia (km)': distanciaP})
+    if all_rad_n2:
+        df_rad_g = pd.DataFrame({'Patron': all_rad_patron, 'Norte Latitud(deg)': all_rad_n2, 'Este Longitud(deg)': all_rad_e2, 'Angulo (deg)': all_rad_ang, 'Distancia (km)': all_rad_dist})
+        n_utm, e_utm, h_utm = zip(*[gms2utm(n, e) for n, e in zip(all_rad_n2, all_rad_e2)])
+        df_rad_utm = pd.DataFrame({'Patron': all_rad_patron, 'Norte': n_utm, 'Este': e_utm, 'Huso': h_utm, 'Angulo (deg)': all_rad_ang, 'Distancia (km)': all_rad_dist})
 
     # Exportar Excel UTM
     try:
+        sheets_written = False
         with pd.ExcelWriter('resultsUTM.xlsx', mode='w', engine='openpyxl') as writer:
-            if not df_loc.empty: df_loc.to_excel(writer, sheet_name="LOCALIZACION")
-            if not df_lin.empty: df_lin.to_excel(writer, sheet_name="LINEA")
-            if not df_cir.empty: df_cir.to_excel(writer, sheet_name="CIRCULO")
-            if not df_rad_g.empty: df_rad_g.to_excel(writer, sheet_name="P_DIST_ANG_G")
-            if not df_rad_utm.empty: df_rad_utm.to_excel(writer, sheet_name="P_DIST_ANG_UTM")
+            if not df_loc.empty:
+                df_loc.to_excel(writer, sheet_name="LOCALIZACION")
+                sheets_written = True
+            if not df_lin.empty:
+                df_lin.to_excel(writer, sheet_name="LINEA")
+                sheets_written = True
+            if not df_cir.empty:
+                df_cir.to_excel(writer, sheet_name="CIRCULO")
+                sheets_written = True
+            if not df_rad_g.empty:
+                df_rad_g.to_excel(writer, sheet_name="P_DIST_ANG_G")
+                sheets_written = True
+            if not df_rad_utm.empty:
+                df_rad_utm.to_excel(writer, sheet_name="P_DIST_ANG_UTM")
+                sheets_written = True
+            if not sheets_written:
+                pd.DataFrame({'Info': ['Sin datos']}).to_excel(writer, sheet_name="DATOS")
     except Exception as e:
         print(f"[!] No se pudo guardar resultsUTM.xlsx: {e}")
 
@@ -447,23 +524,27 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
             tooltip="Línea trazada"
         ).add_to(fg_lineas)
 
-    # 4. Perímetro de Radiación con CURVAS SUAVES
-    if norte_GMSP:
-        lat_c, lon_c = norte_GMSP[0], este_GMSP[0]
-        if abs(lat_c) > 0.0001 and abs(lon_c) > 0.0001:
-            smooth_coords = smooth_radiation_perimeter(lat_c, lon_c, anguloP, distanciaP)
-            for sc in smooth_coords:
-                all_coords.append(sc)
+    # 4. Perímetro de Radiación con CURVAS SUAVES (por cada Patrón)
+    if patrones_dict:
+        for pkey, p in patrones_dict.items():
+            lat_c, lon_c = p['centro'][0], p['centro'][1]
+            if abs(lat_c) > 0.0001 and abs(lon_c) > 0.0001 and len(p['angulos']) >= 1:
+                smooth_coords = smooth_radiation_perimeter(lat_c, lon_c, p['angulos'], p['distancias'])
+                for sc in smooth_coords:
+                    all_coords.append(sc)
 
-            folium.PolyLine(
-                smooth_coords,
-                color="#8e44ad",
-                weight=3.5,
-                opacity=0.95,
-                smooth_factor=1.0,
-                popup="<b>Perímetro de Radiación RF (Curva Suave)</b><br>Contorno de Cobertura Radioeléctrica",
-                tooltip="Perímetro RF (Curva Suave)"
-            ).add_to(fg_perimetro)
+                max_d = max(p['distancias']) if p['distancias'] else 0.0
+                patron_color = p['color']
+
+                folium.PolyLine(
+                    smooth_coords,
+                    color=patron_color,
+                    weight=3.5,
+                    opacity=0.95,
+                    smooth_factor=1.0,
+                    popup=f"<b>Patrón de Radiación RF: {p['etiqueta']}</b><br>Centro: {lat_c:.5f}º, {lon_c:.5f}º<br>Alcance Máximo: {max_d:.2f} km<br>Vértices: {len(p['angulos'])}",
+                    tooltip=f"Perímetro RF — {p['etiqueta']}"
+                ).add_to(fg_perimetro)
 
     # 5. Círculos
     if coordenadasC:
@@ -493,7 +574,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
             gradient={0.0: '#ffcdfd', 0.25: '#819fdd', 0.5: '#00af50', 0.75: '#ffff00', 1.0: '#ff0000'}
         ).add_to(fg_heatmap)
 
-    leyenda(myMap, cajetin_info=cajetin_info, puntos_cajetin=puntos_cajetin)
+    leyenda(myMap, cajetin_info=cajetin_info, puntos_cajetin=puntos_cajetin, patrones_cajetin=patrones_cajetin)
 
     # Determinar Encuadre / Bounds SOLO con coordenadas geográficas válidas
     bounds = None

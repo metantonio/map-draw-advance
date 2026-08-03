@@ -1,7 +1,7 @@
 from branca.element import Template, MacroElement
 import time
 
-def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None, puntos_cajetin=None):
+def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None, puntos_cajetin=None, patrones_cajetin=None):
     if not cajetin_info:
         cajetin_info = {
             'titulo': 'MAP DRAW ADVANCE v2.0 — PLANO GEOESPACIAL',
@@ -15,6 +15,8 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None, puntos_caj
 
     if puntos_cajetin is None:
         puntos_cajetin = []
+    if patrones_cajetin is None:
+        patrones_cajetin = []
 
     # Construir HTML de la tabla de puntos dentro del Cajetín
     puntos_html = ""
@@ -48,6 +50,58 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None, puntos_caj
             </table>
           </td>
         </tr>
+        """
+
+    # Construir HTML de la tabla de Patrones de Radiación dentro del Cajetín
+    patrones_html = ""
+    if patrones_cajetin:
+        patrones_rows = ""
+        for p in patrones_cajetin:
+            c_box = f'<span class="legend-color-box" style="background:{p.get("color", "#8e44ad")}; width:12px; height:8px; display:inline-block; margin-right:4px;"></span>'
+            patrones_rows += f"""
+            <tr>
+              <td style="border: 1px solid #000; padding: 2px 4px; font-weight: bold;">{c_box}{p.get('etiqueta', 'Patrón')}</td>
+              <td style="border: 1px solid #000; padding: 2px 4px;">{p.get('wgs84', '')}</td>
+              <td style="border: 1px solid #000; padding: 2px 4px;">{p.get('utm', '')}</td>
+              <td style="border: 1px solid #000; padding: 2px 4px; text-align:center;">{p.get('max_dist', '')}</td>
+            </tr>
+            """
+        patrones_html = f"""
+        <tr>
+          <td colspan="2" style="padding: 0;">
+            <div style="background: #1e293b; color: #ffffff; font-size: 8px; font-weight: bold; padding: 2px 4px; text-transform: uppercase; text-align: center;">
+              📡 PATRONES DE RADIACIÓN RF REGISTRADOS
+            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:8px; background:#fff;">
+              <thead>
+                <tr style="background:#e2e8f0; font-weight:bold; font-size:7.5px; text-transform:uppercase;">
+                  <td style="border:1px solid #000; padding:2px 4px;">Patrón / Etiqueta</td>
+                  <td style="border:1px solid #000; padding:2px 4px;">Centro WGS-84</td>
+                  <td style="border:1px solid #000; padding:2px 4px;">Centro UTM</td>
+                  <td style="border:1px solid #000; padding:2px 4px; text-align:center;">Alcance Máx</td>
+                </tr>
+              </thead>
+              <tbody>
+                {patrones_rows}
+              </tbody>
+            </table>
+          </td>
+        </tr>
+        """
+
+    # Construir HTML de la leyenda flotante en pantalla
+    patrones_legend_ui = ""
+    if patrones_cajetin:
+        items_ui = ""
+        for p in patrones_cajetin:
+            items_ui += f"""<li style='display:flex; align-items:center; margin-bottom:3px;'><span style='background:{p.get("color", "#8e44ad")}; width:16px; height:12px; display:inline-block; border-radius:2px; margin-right:8px; border:1px solid #333;'></span><b>{p.get("etiqueta")}</b> &nbsp;<span style="color:#64748b; font-size:10px;">({p.get("max_dist")})</span></li>"""
+        patrones_legend_ui = f"""
+        <div style="margin-top:8px; border-top:1px solid #cbd5e1; padding-top:6px;">
+          <div style="font-size:11px; font-weight:bold; color:#0f172a; margin-bottom:4px;">📡 Patrones de Radiación ({len(patrones_cajetin)}):</div>
+          <ul style='list-style:none; padding:0; margin:0; font-size:11px;'>
+            {items_ui}
+          </ul>
+        </div>
         """
 
     template = f"""
@@ -347,6 +401,7 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None, puntos_caj
           <li style='display:flex; align-items:center; margin-bottom:3px;'><span style='background:#819fdd; opacity:0.9; width:26px; height:13px; display:inline-block; border-radius:2px; margin-right:8px; border:1px solid #777;'></span>20%</li>
           <li style='display:flex; align-items:center; margin-bottom:3px;'><span style='background:#ffcdfd; opacity:0.9; width:26px; height:13px; display:inline-block; border-radius:2px; margin-right:8px; border:1px solid #777;'></span>0% (Perímetro RF)</li>
         </ul>
+        {patrones_legend_ui}
       </div>
     </div>
 
@@ -393,6 +448,7 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None, puntos_caj
           </td>
         </tr>
         {puntos_html}
+        {patrones_html}
         <tr>
           <td colspan="2">
             <span class="cajetin-label">LEYENDA DE RADIACIÓN RF (ATENUACIÓN NO LINEAL)</span>

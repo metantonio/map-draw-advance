@@ -377,7 +377,24 @@ function collectCurrentDataFromDOM() {
   const radList = [];
   radRows.forEach(tr => {
     const inputs = tr.querySelectorAll('input');
-    if (inputs.length >= 4) {
+    if (inputs.length >= 6) {
+      const n = parseFloat(inputs[0].value);
+      const e = parseFloat(inputs[1].value);
+      const ang = parseFloat(inputs[2].value);
+      const dist = parseFloat(inputs[3].value);
+      const etiq = inputs[4].value.trim();
+      const col = inputs[5].value.trim();
+      if (!isNaN(n) && !isNaN(e)) {
+        radList.push({
+          norte: n,
+          este: e,
+          angulo: isNaN(ang) ? 0 : ang,
+          distancia: isNaN(dist) ? 1.0 : dist,
+          etiqueta: etiq,
+          color: col
+        });
+      }
+    } else if (inputs.length >= 4) {
       const n = parseFloat(inputs[0].value);
       const e = parseFloat(inputs[1].value);
       const ang = parseFloat(inputs[2].value);
@@ -387,7 +404,9 @@ function collectCurrentDataFromDOM() {
           norte: n,
           este: e,
           angulo: isNaN(ang) ? 0 : ang,
-          distancia: isNaN(dist) ? 1.0 : dist
+          distancia: isNaN(dist) ? 1.0 : dist,
+          etiqueta: '',
+          color: ''
         });
       }
     }
@@ -399,10 +418,13 @@ function collectCurrentDataFromDOM() {
     circulo: cirList,
     radiacion: radList
   };
+
+  computeRadiationDefaults();
 }
 
 // Renderizar todas las tablas
 function renderAllTables() {
+  computeRadiationDefaults();
   renderTableLoc();
   renderTableLin();
   renderTableCir();
@@ -466,16 +488,53 @@ function renderTableCir() {
 }
 
 // 4. Tabla Radiación
+const RAD_PALETTE = ['#8e44ad', '#e74c3c', '#2980b9', '#27ae60', '#e67e22', '#16a085', '#d35400', '#2c3e50', '#f39c12'];
+
+function computeRadiationDefaults() {
+  if (!currentData || !currentData.radiacion) return;
+
+  const centerMap = [];
+
+  currentData.radiacion.forEach(item => {
+    const n = parseFloat(item.norte) || 0;
+    const e = parseFloat(item.este) || 0;
+
+    let match = centerMap.find(c => Math.abs(c.norte - n) < 0.0001 && Math.abs(c.este - e) < 0.0001);
+    if (!match) {
+      const idx = centerMap.length;
+      match = {
+        norte: n,
+        este: e,
+        defaultEtiqueta: `Patrón ${idx + 1}`,
+        defaultColor: RAD_PALETTE[idx % RAD_PALETTE.length]
+      };
+      centerMap.push(match);
+    }
+
+    if (!item.etiqueta || item.etiqueta.trim() === '') {
+      item.etiqueta = match.defaultEtiqueta;
+    }
+    if (!item.color || item.color.trim() === '') {
+      item.color = match.defaultColor;
+    }
+  });
+}
+
 function renderTableRad() {
+  computeRadiationDefaults();
   const tbody = document.querySelector('#table-rad tbody');
   tbody.innerHTML = '';
   currentData.radiacion.forEach((item, index) => {
     const tr = document.createElement('tr');
+    const colorVal = item.color || RAD_PALETTE[index % RAD_PALETTE.length];
+    const etiqVal = item.etiqueta || `Patrón 1`;
     tr.innerHTML = `
       <td><input type="number" step="any" value="${item.norte}"></td>
       <td><input type="number" step="any" value="${item.este}"></td>
       <td><input type="number" step="any" value="${item.angulo || 0}"></td>
       <td><input type="number" step="any" value="${item.distancia || 1}"></td>
+      <td><input type="text" value="${etiqVal}" placeholder="Ej: Patrón 1"></td>
+      <td><input type="color" value="${colorVal.startsWith('#') ? colorVal : '#8e44ad'}" style="padding:1px; cursor:pointer; height:28px;"></td>
       <td><button class="btn-danger-icon" onclick="removeRow('radiacion', ${index})"><i class="fa-solid fa-trash"></i></button></td>
     `;
     tbody.appendChild(tr);
@@ -495,8 +554,15 @@ function addRow(tableId) {
     const last = currentData.circulo[currentData.circulo.length - 1] || { norte: 10.48, este: -66.89 };
     currentData.circulo.push({ norte: last.norte, este: last.este, radio: 100 });
   } else if (tableId === 'table-rad') {
-    const last = currentData.radiacion[currentData.radiacion.length - 1] || { norte: 10.48, este: -66.89 };
-    currentData.radiacion.push({ norte: last.norte, este: last.este, angulo: 0, distancia: 1.0 });
+    const last = currentData.radiacion[currentData.radiacion.length - 1] || { norte: 10.48, este: -66.89, etiqueta: '', color: '' };
+    currentData.radiacion.push({
+      norte: last.norte,
+      este: last.este,
+      angulo: 0,
+      distancia: 1.0,
+      etiqueta: last.etiqueta || '',
+      color: last.color || ''
+    });
   }
   renderAllTables();
   triggerAutoUpdateMap(true);
