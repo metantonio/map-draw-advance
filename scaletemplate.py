@@ -222,8 +222,35 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None, puntos_caj
           display: none !important;
         }}
 
-        /* Ocultar Leyenda Flotante Normal */
-        #maplegend {{
+        /* Barra de Escala Gráfica Única en Sistema Internacional (Metros / Km) Centrada en Borde Inferior */
+        .leaflet-control-scale {{
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          position: fixed !important;
+          bottom: 10mm !important;
+          left: 50% !important;
+          transform: translateX(-50%) !important;
+          margin: 0 !important;
+          z-index: 9999999 !important;
+        }}
+
+        .leaflet-control-scale-line {{
+          background: rgba(255, 255, 255, 0.95) !important;
+          border: 2px solid #000000 !important;
+          border-top: none !important;
+          color: #000000 !important;
+          font-weight: 800 !important;
+          font-size: 10.5px !important;
+          padding: 2px 8px !important;
+          box-shadow: none !important;
+          text-align: center !important;
+          line-height: 1.2 !important;
+        }}
+
+        /* Ocultar Estrictamente Escala en Millas o Pies */
+        .leaflet-control-scale-line:not(:first-child),
+        .leaflet-control-scale-line:nth-child(2) {{
           display: none !important;
         }}
 

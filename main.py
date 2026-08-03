@@ -323,7 +323,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     initial_center = valid_initial[0] if valid_initial else default_location
 
     # Inicializar Folium Map con tiles=None y Zoom Suave Intermedio (zoom_snap=0.25)
-    myMap = folium.Map(location=initial_center, zoom_start=12, control_scale=True, tiles=None, zoom_snap=0.25, zoom_delta=0.25)
+    myMap = folium.Map(location=initial_center, zoom_start=12, control_scale=False, tiles=None, zoom_snap=0.25, zoom_delta=0.25)
 
     # Añadir Capas Base Estándar
     folium.TileLayer('openstreetmap', name='OpenStreetMap (Estándar)').add_to(myMap)
@@ -821,6 +821,10 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
             try {{
                 if (window[key] && window[key] instanceof L.Map) {{
                     var map = window[key];
+                    if (!window.METRIC_SCALE_ADDED) {{
+                        L.control.scale({{ position: 'bottomleft', metric: true, imperial: false, maxWidth: 160 }}).addTo(map);
+                        window.METRIC_SCALE_ADDED = true;
+                    }}
                     map.off('moveend zoomend resize', updateGridEdgeBounds);
                     map.on('moveend zoomend resize', updateGridEdgeBounds);
                     updateGridEdgeBounds();
