@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_465b3dd3bea586abfdc0ef0f47e00667 {
+                #map_ee99828b825dfc103e8c707d6f4cb47d {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -152,11 +152,14 @@
 
             var stepM = 100000;
             if (zoom >= 17) stepM = 100;
+            else if (zoom >= 16) stepM = 250;
             else if (zoom >= 15) stepM = 500;
-            else if (zoom >= 13) stepM = 1000;
-            else if (zoom >= 11) stepM = 5000;
-            else if (zoom >= 9) stepM = 10000;
-            else if (zoom >= 7) stepM = 50000;
+            else if (zoom >= 14) stepM = 1000;
+            else if (zoom >= 13) stepM = 2500;
+            else if (zoom >= 12) stepM = 5000;
+            else if (zoom >= 10) stepM = 10000;
+            else if (zoom >= 8) stepM = 25000;
+            else if (zoom >= 6) stepM = 50000;
 
             var startE = Math.floor(eMin / stepM) * stepM;
             var endE = Math.ceil(eMax / stepM) * stepM;
@@ -230,11 +233,14 @@
         } else {
             // Sistema WGS-84
             var stepDeg = 1.0;
-            if (zoom >= 16) stepDeg = 0.001;
+            if (zoom >= 17) stepDeg = 0.001;
+            else if (zoom >= 15) stepDeg = 0.002;
             else if (zoom >= 14) stepDeg = 0.005;
-            else if (zoom >= 12) stepDeg = 0.01;
+            else if (zoom >= 13) stepDeg = 0.01;
+            else if (zoom >= 11) stepDeg = 0.02;
             else if (zoom >= 10) stepDeg = 0.05;
             else if (zoom >= 8) stepDeg = 0.1;
+            else if (zoom >= 7) stepDeg = 0.2;
             else if (zoom >= 6) stepDeg = 0.5;
 
             var startLat = Math.floor(south / stepDeg) * stepDeg;
@@ -254,7 +260,7 @@
                 }).addTo(dynamicGridLayerGroup);
 
                 var hemiN = latVal >= 0 ? "N" : "S";
-                var lblLat = Math.abs(latVal).toFixed(2) + "º " + hemiN;
+                var lblLat = Math.abs(latVal).toFixed(4) + "º " + hemiN;
 
                 // Borde Izquierdo (Interno)
                 L.marker([latVal, lftLon], {
@@ -283,7 +289,7 @@
                 }).addTo(dynamicGridLayerGroup);
 
                 var hemiE = lonVal >= 0 ? "E" : "W";
-                var lblLon = Math.abs(lonVal).toFixed(2) + "º " + hemiE;
+                var lblLon = Math.abs(lonVal).toFixed(4) + "º " + hemiE;
 
                 // Borde Superior (Interno)
                 L.marker([topLat, lonVal], {
@@ -331,7 +337,7 @@
     </script>
     
     
-            <div class="folium-map" id="map_465b3dd3bea586abfdc0ef0f47e00667" ></div>
+            <div class="folium-map" id="map_ee99828b825dfc103e8c707d6f4cb47d" ></div>
         
     
             
@@ -727,8 +733,8 @@
 <script>
     
     
-            var map_465b3dd3bea586abfdc0ef0f47e00667 = L.map(
-                "map_465b3dd3bea586abfdc0ef0f47e00667",
+            var map_ee99828b825dfc103e8c707d6f4cb47d = L.map(
+                "map_ee99828b825dfc103e8c707d6f4cb47d",
                 {
                     center: [10.48, -66.89],
                     crs: L.CRS.EPSG3857,
@@ -736,17 +742,19 @@
   "zoom": 12,
   "zoomControl": true,
   "preferCanvas": false,
+  "zoomSnap": 0.25,
+  "zoomDelta": 0.25,
 }
 
                 }
             );
-            L.control.scale().addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            L.control.scale().addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
 
             
 
         
     
-            var tile_layer_93b3bbed5c5278fcbd3ee9e7fb6c470b = L.tileLayer(
+            var tile_layer_a16cc8a736d086f6b4710fb23dad96de = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -763,10 +771,10 @@
             );
         
     
-            tile_layer_93b3bbed5c5278fcbd3ee9e7fb6c470b.addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            tile_layer_a16cc8a736d086f6b4710fb23dad96de.addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
         
     
-            var tile_layer_3680646afeb3f4c84544a7b014a61cbd = L.tileLayer(
+            var tile_layer_3b3ecca7705f2c523cd498dea453935d = L.tileLayer(
                 "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
                 {
   "minZoom": 0,
@@ -783,10 +791,10 @@
             );
         
     
-            tile_layer_3680646afeb3f4c84544a7b014a61cbd.addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            tile_layer_3b3ecca7705f2c523cd498dea453935d.addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
         
     
-            var tile_layer_a3c8d3fa81376e8afbe2a649bfa8cbf1 = L.tileLayer(
+            var tile_layer_fe93f6820876c7a44c2b55ba94dc6b42 = L.tileLayer(
                 "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
                 {
   "minZoom": 0,
@@ -803,10 +811,10 @@
             );
         
     
-            tile_layer_a3c8d3fa81376e8afbe2a649bfa8cbf1.addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            tile_layer_fe93f6820876c7a44c2b55ba94dc6b42.addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
         
     
-            var tile_layer_25be6a0c976968659943621479739bc0 = L.tileLayer(
+            var tile_layer_d7a303db3d2a21d346ffea9d49e828b6 = L.tileLayer(
                 "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
                 {
   "minZoom": 0,
@@ -823,10 +831,10 @@
             );
         
     
-            tile_layer_25be6a0c976968659943621479739bc0.addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            tile_layer_d7a303db3d2a21d346ffea9d49e828b6.addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
         
     
-            var tile_layer_43e3570dc862c8f765f08d47285cecc2 = L.tileLayer(
+            var tile_layer_5110727bb5f45665630c73b49ae84eac = L.tileLayer(
                 "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
                 {
   "minZoom": 0,
@@ -843,10 +851,10 @@
             );
         
     
-            tile_layer_43e3570dc862c8f765f08d47285cecc2.addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            tile_layer_5110727bb5f45665630c73b49ae84eac.addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
         
     
-            var tile_layer_5ba49f7a178086fae811d484ca7df52e = L.tileLayer(
+            var tile_layer_e16d8dcf220b5f73ce87e28c7fea9cff = L.tileLayer(
                 "https://mt1.google.com/vt/lyrs=s\u0026x={x}\u0026y={y}\u0026z={z}",
                 {
   "minZoom": 0,
@@ -863,10 +871,10 @@
             );
         
     
-            tile_layer_5ba49f7a178086fae811d484ca7df52e.addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            tile_layer_e16d8dcf220b5f73ce87e28c7fea9cff.addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
         
     
-            var tile_layer_84ea7cb6568a79aa8458d7fe0008bd6d = L.tileLayer(
+            var tile_layer_de5abc738800f08c873eec6c99ab849c = L.tileLayer(
                 "https://mt1.google.com/vt/lyrs=m\u0026x={x}\u0026y={y}\u0026z={z}",
                 {
   "minZoom": 0,
@@ -883,29 +891,29 @@
             );
         
     
-            tile_layer_84ea7cb6568a79aa8458d7fe0008bd6d.addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            tile_layer_de5abc738800f08c873eec6c99ab849c.addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
         
     
-            map_465b3dd3bea586abfdc0ef0f47e00667.fitBounds(
+            map_ee99828b825dfc103e8c707d6f4cb47d.fitBounds(
                 [[10.47, -66.9], [10.49, -66.88]],
                 {}
             );
         
     
-            var feature_group_fac9b42a645c0dddfbb5c9c074b04c5d = L.featureGroup(
+            var feature_group_ddc7ba0e01ee2f40637512972720f0d7 = L.featureGroup(
                 {
 }
             );
         
     
-            var marker_ded5c11b0db6e79f6ead9a4b95ff23a9 = L.marker(
+            var marker_5e1de9e9a3adcb14a9473d90c0d8f998 = L.marker(
                 [10.48, -66.89],
                 {
 }
-            ).addTo(feature_group_fac9b42a645c0dddfbb5c9c074b04c5d);
+            ).addTo(feature_group_ddc7ba0e01ee2f40637512972720f0d7);
         
     
-            var icon_c6996657859b857d2eac696ad908b3ad = L.AwesomeMarkers.icon(
+            var icon_d33aebee6039b98f5aa603b6d8428c25 = L.AwesomeMarkers.icon(
                 {
   "markerColor": "blue",
   "iconColor": "white",
@@ -916,24 +924,24 @@
             );
         
     
-        var popup_98a8f3519da89f9f5fcb48bedd3a67ba = L.popup({
+        var popup_38eb5aa55e63142fcc9cdde4f49484e6 = L.popup({
   "maxWidth": 300,
 });
 
         
             
-                var html_dd08908c60574026161af7409ce0a7fd = $(`<div id="html_dd08908c60574026161af7409ce0a7fd" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: sans-serif; min-width: 180px;">                     <h4 style="margin: 0 0 8px 0; color: #2c3e50;">📍 Punto_1</h4>                     <table style="width: 100%; border-collapse: collapse; font-size: 12px;">                         <tr><td><b>Latitud:</b></td><td>10.480000 º</td></tr>                         <tr><td><b>Longitud:</b></td><td>-66.890000 º</td></tr>                         <tr><td><b>Índice:</b></td><td>#1</td></tr>                     </table>                 </div>                 </div>`)[0];
-                popup_98a8f3519da89f9f5fcb48bedd3a67ba.setContent(html_dd08908c60574026161af7409ce0a7fd);
+                var html_9f452299b5ae7e20553c9095b1b98fce = $(`<div id="html_9f452299b5ae7e20553c9095b1b98fce" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: sans-serif; min-width: 180px;">                     <h4 style="margin: 0 0 8px 0; color: #2c3e50;">📍 Punto_1</h4>                     <table style="width: 100%; border-collapse: collapse; font-size: 12px;">                         <tr><td><b>Latitud:</b></td><td>10.480000 º</td></tr>                         <tr><td><b>Longitud:</b></td><td>-66.890000 º</td></tr>                         <tr><td><b>Índice:</b></td><td>#1</td></tr>                     </table>                 </div>                 </div>`)[0];
+                popup_38eb5aa55e63142fcc9cdde4f49484e6.setContent(html_9f452299b5ae7e20553c9095b1b98fce);
             
         
 
-        marker_ded5c11b0db6e79f6ead9a4b95ff23a9.bindPopup(popup_98a8f3519da89f9f5fcb48bedd3a67ba)
+        marker_5e1de9e9a3adcb14a9473d90c0d8f998.bindPopup(popup_38eb5aa55e63142fcc9cdde4f49484e6)
         ;
 
         
     
     
-            marker_ded5c11b0db6e79f6ead9a4b95ff23a9.bindTooltip(
+            marker_5e1de9e9a3adcb14a9473d90c0d8f998.bindTooltip(
                 `<div style="background-color: rgba(255, 255, 255, 0.92); border: 1px solid #1e293b; border-radius: 4px; color: #0f172a; font-weight: bold; font-size: 11px; padding: 2px 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.25);">
                      <b>Punto_1</b>
                  </div>`,
@@ -949,67 +957,67 @@
             );
         
     
-                marker_ded5c11b0db6e79f6ead9a4b95ff23a9.setIcon(icon_c6996657859b857d2eac696ad908b3ad);
+                marker_5e1de9e9a3adcb14a9473d90c0d8f998.setIcon(icon_d33aebee6039b98f5aa603b6d8428c25);
             
     
-            feature_group_fac9b42a645c0dddfbb5c9c074b04c5d.addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            feature_group_ddc7ba0e01ee2f40637512972720f0d7.addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
         
     
-            var feature_group_4e7baaceace330f157d1c7475f1b4305 = L.featureGroup(
+            var feature_group_b2a342ed951c61889d9bfeffe1c108be = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_4e7baaceace330f157d1c7475f1b4305.addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            feature_group_b2a342ed951c61889d9bfeffe1c108be.addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
         
     
-            var feature_group_4ea99ef23785c9b312870f125c002bb3 = L.featureGroup(
+            var feature_group_c219fc3fbcd84164a932173c0bc28cd1 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_4ea99ef23785c9b312870f125c002bb3.addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            feature_group_c219fc3fbcd84164a932173c0bc28cd1.addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
         
     
-            var feature_group_13685c63b0f549b084cfbf1b9013f42b = L.featureGroup(
+            var feature_group_e0b2f0cd7fdcb76c3e6e3b6d788db9a6 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_13685c63b0f549b084cfbf1b9013f42b.addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            feature_group_e0b2f0cd7fdcb76c3e6e3b6d788db9a6.addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
         
     
-            var feature_group_3870f38c251edfe565c5bf130339038f = L.featureGroup(
+            var feature_group_9f8dccc92c7101ac1a1bf6dc352d3f51 = L.featureGroup(
                 {
 }
             );
         
     
-            var feature_group_aefeeabe6213cf9a3110dea65e772eaa = L.featureGroup(
+            var feature_group_9b0eb241e2c9127043988e19e34f9d86 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_aefeeabe6213cf9a3110dea65e772eaa.addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            feature_group_9b0eb241e2c9127043988e19e34f9d86.addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
         
     
-            var feature_group_417f954bc570555c8473174e7c548f01 = L.featureGroup(
+            var feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7 = L.featureGroup(
                 {
 }
             );
         
     
-            var poly_line_525ef88cf22dbd83b8068fee8cbddb1d = L.polyline(
+            var poly_line_600470a381339abe49cbede207d8eafb = L.polyline(
                 [[10.46875177770481, -66.90786690485099], [10.495866496216209, -66.90768481550465]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            poly_line_525ef88cf22dbd83b8068fee8cbddb1d.bindTooltip(
+            poly_line_600470a381339abe49cbede207d8eafb.bindTooltip(
                 `<div>
                      UTM Este: 729000 m (Huso 19)
                  </div>`,
@@ -1019,45 +1027,45 @@
             );
         
     
-            var marker_221bfd1f3f8953a94ccf25fb99f91736 = L.marker(
+            var marker_ac57dca949ca56e19d60e3043fbaf1ed = L.marker(
                 [10.495866496216209, -66.90768481550465],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_c7efb0266bd9fe2fd072fd9b421bdea8 = L.divIcon({
+            var div_icon_60dbe032d7a6425be2eb9b9387df9793 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-top\"\u003eE: 729000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_221bfd1f3f8953a94ccf25fb99f91736.setIcon(div_icon_c7efb0266bd9fe2fd072fd9b421bdea8);
+                marker_ac57dca949ca56e19d60e3043fbaf1ed.setIcon(div_icon_60dbe032d7a6425be2eb9b9387df9793);
             
     
-            var marker_feea5ebb2fe3e890d2941eb700da7cbd = L.marker(
+            var marker_07d79f029990a34df552f73132de93e0 = L.marker(
                 [10.46875177770481, -66.90786690485099],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_b70d9c8bbc4ec8ae5b8041acb70a32bf = L.divIcon({
+            var div_icon_e3d78c710cc546f46bc21bc25178ce04 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-bottom\"\u003eE: 729000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_feea5ebb2fe3e890d2941eb700da7cbd.setIcon(div_icon_b70d9c8bbc4ec8ae5b8041acb70a32bf);
+                marker_07d79f029990a34df552f73132de93e0.setIcon(div_icon_e3d78c710cc546f46bc21bc25178ce04);
             
     
-            var poly_line_bf24494fba9373e80797d5ca36732259 = L.polyline(
+            var poly_line_feb74f8c2a1f939b616946552ba713dc = L.polyline(
                 [[10.468691653975496, -66.89873520019785], [10.495806213364867, -66.89855231749404]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            poly_line_bf24494fba9373e80797d5ca36732259.bindTooltip(
+            poly_line_feb74f8c2a1f939b616946552ba713dc.bindTooltip(
                 `<div>
                      UTM Este: 730000 m (Huso 19)
                  </div>`,
@@ -1067,45 +1075,45 @@
             );
         
     
-            var marker_115462a4c47bb97c66230ca8b1d73e5e = L.marker(
+            var marker_76bb79acd6c3356fc200bf54d184cf7a = L.marker(
                 [10.495806213364867, -66.89855231749404],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_541b7714dbb4634850e62e7a9287317d = L.divIcon({
+            var div_icon_1794792d9cf2e39f9e6ed49187b54e39 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-top\"\u003eE: 730000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_115462a4c47bb97c66230ca8b1d73e5e.setIcon(div_icon_541b7714dbb4634850e62e7a9287317d);
+                marker_76bb79acd6c3356fc200bf54d184cf7a.setIcon(div_icon_1794792d9cf2e39f9e6ed49187b54e39);
             
     
-            var marker_4166e325c1cc18247f360e9cb9b92113 = L.marker(
+            var marker_2cc4092ceb8612d5856e35bef3258625 = L.marker(
                 [10.468691653975496, -66.89873520019785],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_27c66d8aa82cd8cd352481693c69dc53 = L.divIcon({
+            var div_icon_cecc9d3b6c3ef42a2e16c795b429779f = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-bottom\"\u003eE: 730000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_4166e325c1cc18247f360e9cb9b92113.setIcon(div_icon_27c66d8aa82cd8cd352481693c69dc53);
+                marker_2cc4092ceb8612d5856e35bef3258625.setIcon(div_icon_cecc9d3b6c3ef42a2e16c795b429779f);
             
     
-            var poly_line_4eccef48760bc5fc9b072f3dc5b79716 = L.polyline(
+            var poly_line_e03c1f9b5f359540d692e295d0b6141b = L.polyline(
                 [[10.468631268850352, -66.88960355104338], [10.495745668425954, -66.88941987500552]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            poly_line_4eccef48760bc5fc9b072f3dc5b79716.bindTooltip(
+            poly_line_e03c1f9b5f359540d692e295d0b6141b.bindTooltip(
                 `<div>
                      UTM Este: 731000 m (Huso 19)
                  </div>`,
@@ -1115,45 +1123,45 @@
             );
         
     
-            var marker_2cb870e6f16b4f4e9fe7f2a636389dec = L.marker(
+            var marker_26c24490825c09942ca41cf3b72b01f6 = L.marker(
                 [10.495745668425954, -66.88941987500552],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_646f8cb2e0c70a772336cbe8a3b7cf3e = L.divIcon({
+            var div_icon_e4495d0a61760f13b43bf27febd28b6b = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-top\"\u003eE: 731000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_2cb870e6f16b4f4e9fe7f2a636389dec.setIcon(div_icon_646f8cb2e0c70a772336cbe8a3b7cf3e);
+                marker_26c24490825c09942ca41cf3b72b01f6.setIcon(div_icon_e4495d0a61760f13b43bf27febd28b6b);
             
     
-            var marker_72f5cdda3db2740ed63f8a93962c9f57 = L.marker(
+            var marker_2102efc9597832709510a93ca99109ec = L.marker(
                 [10.468631268850352, -66.88960355104338],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_53117683d61e88b2792310e7d92f544c = L.divIcon({
+            var div_icon_b123db538caf12aa0b46451bdf116dc9 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-bottom\"\u003eE: 731000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_72f5cdda3db2740ed63f8a93962c9f57.setIcon(div_icon_53117683d61e88b2792310e7d92f544c);
+                marker_2102efc9597832709510a93ca99109ec.setIcon(div_icon_b123db538caf12aa0b46451bdf116dc9);
             
     
-            var poly_line_40849d968fdcf19a1f773b9161a62d49 = L.polyline(
+            var poly_line_f0444471afce882c686ed80d6a2b9081 = L.polyline(
                 [[10.468570622336955, -66.88047195762832], [10.49568486140706, -66.88028748827989]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            poly_line_40849d968fdcf19a1f773b9161a62d49.bindTooltip(
+            poly_line_f0444471afce882c686ed80d6a2b9081.bindTooltip(
                 `<div>
                      UTM Este: 732000 m (Huso 19)
                  </div>`,
@@ -1163,45 +1171,45 @@
             );
         
     
-            var marker_e599d840b324a8142be9a158e9818d1b = L.marker(
+            var marker_b62d1fa10de5eeeec6088c006a230e92 = L.marker(
                 [10.49568486140706, -66.88028748827989],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_0a80c5a3ccc027519b7e252bb4bc034c = L.divIcon({
+            var div_icon_10b0f533ddb3caad9de1d9b0467eddcc = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-top\"\u003eE: 732000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_e599d840b324a8142be9a158e9818d1b.setIcon(div_icon_0a80c5a3ccc027519b7e252bb4bc034c);
+                marker_b62d1fa10de5eeeec6088c006a230e92.setIcon(div_icon_10b0f533ddb3caad9de1d9b0467eddcc);
             
     
-            var marker_4ab72f948495e7168902bc4e965c2ea7 = L.marker(
+            var marker_753d7549991e30519a8122d5a06fd026 = L.marker(
                 [10.468570622336955, -66.88047195762832],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_b291494148029af1d5d1b45d1bab5a10 = L.divIcon({
+            var div_icon_d4fa40784d96dc0d8f0671f3e13e5949 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-bottom\"\u003eE: 732000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_4ab72f948495e7168902bc4e965c2ea7.setIcon(div_icon_b291494148029af1d5d1b45d1bab5a10);
+                marker_753d7549991e30519a8122d5a06fd026.setIcon(div_icon_d4fa40784d96dc0d8f0671f3e13e5949);
             
     
-            var poly_line_3fbf951f65d4484c641285ea3213ec11 = L.polyline(
+            var poly_line_1dbcf697375fe6c68eee8fa7e3f9a305 = L.polyline(
                 [[10.468509714442904, -66.87134042019333], [10.495623792315808, -66.87115515755798]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            poly_line_3fbf951f65d4484c641285ea3213ec11.bindTooltip(
+            poly_line_1dbcf697375fe6c68eee8fa7e3f9a305.bindTooltip(
                 `<div>
                      UTM Este: 733000 m (Huso 19)
                  </div>`,
@@ -1211,45 +1219,45 @@
             );
         
     
-            var marker_503a2f0f0b98dd3609efc8699717c202 = L.marker(
+            var marker_3c19d2d109b96081c16028ec70d4a380 = L.marker(
                 [10.495623792315808, -66.87115515755798],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_ecec6c87bcda996ff3e23ec3ca9a60f7 = L.divIcon({
+            var div_icon_70919f04b1d63d4f4ff0d5fa8a047c51 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-top\"\u003eE: 733000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_503a2f0f0b98dd3609efc8699717c202.setIcon(div_icon_ecec6c87bcda996ff3e23ec3ca9a60f7);
+                marker_3c19d2d109b96081c16028ec70d4a380.setIcon(div_icon_70919f04b1d63d4f4ff0d5fa8a047c51);
             
     
-            var marker_324fe434e4d204fe7df50979c191f05d = L.marker(
+            var marker_7a841956cb55ed301d8cb81445f3c3ff = L.marker(
                 [10.468509714442904, -66.87134042019333],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_858af2c1209b4ad4069794992d26fc89 = L.divIcon({
+            var div_icon_f44dbb11e0eade8f91aae488b2b19c2a = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-bottom\"\u003eE: 733000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_324fe434e4d204fe7df50979c191f05d.setIcon(div_icon_858af2c1209b4ad4069794992d26fc89);
+                marker_7a841956cb55ed301d8cb81445f3c3ff.setIcon(div_icon_f44dbb11e0eade8f91aae488b2b19c2a);
             
     
-            var poly_line_c2445cd5c25ef945d1cc06da99eb6a99 = L.polyline(
+            var poly_line_b65463c6b3cc41a6be5bc123e79f68f9 = L.polyline(
                 [[10.46875177770481, -66.90786690485099], [10.468509714442904, -66.87134042019333]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            poly_line_c2445cd5c25ef945d1cc06da99eb6a99.bindTooltip(
+            poly_line_b65463c6b3cc41a6be5bc123e79f68f9.bindTooltip(
                 `<div>
                      UTM Norte: 1158000 m (Huso 19)
                  </div>`,
@@ -1259,45 +1267,45 @@
             );
         
     
-            var marker_3f57b743ee37abc2f695bb74fba0782f = L.marker(
+            var marker_d1bd013a34704a9d1c12cf560464d6d6 = L.marker(
                 [10.46875177770481, -66.90786690485099],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_669b7a1884ed00d3e90d01c1c9c5cd1f = L.divIcon({
+            var div_icon_6f0a9629a1e58d67cc0199cbcc8da947 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-left\"\u003eN: 1158000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_3f57b743ee37abc2f695bb74fba0782f.setIcon(div_icon_669b7a1884ed00d3e90d01c1c9c5cd1f);
+                marker_d1bd013a34704a9d1c12cf560464d6d6.setIcon(div_icon_6f0a9629a1e58d67cc0199cbcc8da947);
             
     
-            var marker_f6d859da0c36b4a61f95985b28f11c63 = L.marker(
+            var marker_ee518b977114d8e5874c78d50c4d2ac6 = L.marker(
                 [10.468509714442904, -66.87134042019333],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_e2b2d1a6613d8654a0d147fdef63d9e7 = L.divIcon({
+            var div_icon_9c04b78c4f7165926b4e366dd7b9f345 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-right\"\u003eN: 1158000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_f6d859da0c36b4a61f95985b28f11c63.setIcon(div_icon_e2b2d1a6613d8654a0d147fdef63d9e7);
+                marker_ee518b977114d8e5874c78d50c4d2ac6.setIcon(div_icon_9c04b78c4f7165926b4e366dd7b9f345);
             
     
-            var poly_line_cc60615b18cf847ceeaefe7e7836ca31 = L.polyline(
+            var poly_line_a38bf1f59e55a6ef10f9b50d3d75b3a8 = L.polyline(
                 [[10.47779002267898, -66.90780626367054], [10.477547745882775, -66.87127872221286]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            poly_line_cc60615b18cf847ceeaefe7e7836ca31.bindTooltip(
+            poly_line_a38bf1f59e55a6ef10f9b50d3d75b3a8.bindTooltip(
                 `<div>
                      UTM Norte: 1159000 m (Huso 19)
                  </div>`,
@@ -1307,45 +1315,45 @@
             );
         
     
-            var marker_e7b29116bd29de270a437e9e582a420d = L.marker(
+            var marker_7d9d9c873fdf132f93710e1345b7824e = L.marker(
                 [10.47779002267898, -66.90780626367054],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_cd44ccaca5a57d9dabfb312c2f2af71f = L.divIcon({
+            var div_icon_6f4d0bb900c6bbf6cffa2af75c7d090e = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-left\"\u003eN: 1159000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_e7b29116bd29de270a437e9e582a420d.setIcon(div_icon_cd44ccaca5a57d9dabfb312c2f2af71f);
+                marker_7d9d9c873fdf132f93710e1345b7824e.setIcon(div_icon_6f4d0bb900c6bbf6cffa2af75c7d090e);
             
     
-            var marker_a250a7a081ac10d01fbb91b6558b0d3a = L.marker(
+            var marker_608105c0457c1fa7fd3ecc7fac80dc88 = L.marker(
                 [10.477547745882775, -66.87127872221286],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_e950edb78ab17399976cc6740aa14b50 = L.divIcon({
+            var div_icon_90407910ded65f811afbb68c0856fdd2 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-right\"\u003eN: 1159000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_a250a7a081ac10d01fbb91b6558b0d3a.setIcon(div_icon_e950edb78ab17399976cc6740aa14b50);
+                marker_608105c0457c1fa7fd3ecc7fac80dc88.setIcon(div_icon_90407910ded65f811afbb68c0856fdd2);
             
     
-            var poly_line_bbc0c330eb2d543f4a09bad045594e3a = L.polyline(
+            var poly_line_06218a92eb39073fa687f6c3ed20c730 = L.polyline(
                 [[10.486828262184293, -66.90774556722434], [10.48658577184193, -66.87121696800371]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            poly_line_bbc0c330eb2d543f4a09bad045594e3a.bindTooltip(
+            poly_line_06218a92eb39073fa687f6c3ed20c730.bindTooltip(
                 `<div>
                      UTM Norte: 1160000 m (Huso 19)
                  </div>`,
@@ -1355,45 +1363,45 @@
             );
         
     
-            var marker_1fa4c5a4029f392c59fbb5e11f4951f6 = L.marker(
+            var marker_cb8193247a0f9f3638822257ac197bc8 = L.marker(
                 [10.486828262184293, -66.90774556722434],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_2f9fb843757aaf88a442bf8c1c232eee = L.divIcon({
+            var div_icon_f315b2bab8142403605d8cadb75d3f78 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-left\"\u003eN: 1160000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_1fa4c5a4029f392c59fbb5e11f4951f6.setIcon(div_icon_2f9fb843757aaf88a442bf8c1c232eee);
+                marker_cb8193247a0f9f3638822257ac197bc8.setIcon(div_icon_f315b2bab8142403605d8cadb75d3f78);
             
     
-            var marker_61e3be41f9550ad0fc859ef3ac91d1d5 = L.marker(
+            var marker_2fdd8405b31bc075e2f40251eb4f8f26 = L.marker(
                 [10.48658577184193, -66.87121696800371],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_76a1843f0816e345de3bd34631e6458f = L.divIcon({
+            var div_icon_e90f1e5c6b04e052b13d453013b8d5f6 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-right\"\u003eN: 1160000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_61e3be41f9550ad0fc859ef3ac91d1d5.setIcon(div_icon_76a1843f0816e345de3bd34631e6458f);
+                marker_2fdd8405b31bc075e2f40251eb4f8f26.setIcon(div_icon_e90f1e5c6b04e052b13d453013b8d5f6);
             
     
-            var poly_line_6c64ff6c9dea486978739c5b4b3b274b = L.polyline(
+            var poly_line_84de4dabd9d116d5543f76f395e72d29 = L.polyline(
                 [[10.495866496216209, -66.90768481550465], [10.495623792315808, -66.87115515755798]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            poly_line_6c64ff6c9dea486978739c5b4b3b274b.bindTooltip(
+            poly_line_84de4dabd9d116d5543f76f395e72d29.bindTooltip(
                 `<div>
                      UTM Norte: 1161000 m (Huso 19)
                  </div>`,
@@ -1403,74 +1411,74 @@
             );
         
     
-            var marker_fab7517de7471ec90908f8498224e03a = L.marker(
+            var marker_577974af553138e91eeeafd4896632b1 = L.marker(
                 [10.495866496216209, -66.90768481550465],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_d7894c630e5ded6472f2e11d994e7d5d = L.divIcon({
+            var div_icon_f9e1d28f540ad19987fe0edeabc5bb85 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-left\"\u003eN: 1161000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_fab7517de7471ec90908f8498224e03a.setIcon(div_icon_d7894c630e5ded6472f2e11d994e7d5d);
+                marker_577974af553138e91eeeafd4896632b1.setIcon(div_icon_f9e1d28f540ad19987fe0edeabc5bb85);
             
     
-            var marker_299132d791cef7d59b323cddbdf287c0 = L.marker(
+            var marker_b848dffe00f81e61aa563143d5b116eb = L.marker(
                 [10.495623792315808, -66.87115515755798],
                 {
 }
-            ).addTo(feature_group_417f954bc570555c8473174e7c548f01);
+            ).addTo(feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7);
         
     
-            var div_icon_9cca6e98b28b7e0469694c0fb2272112 = L.divIcon({
+            var div_icon_10659cef66158009702474461c52797c = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-right\"\u003eN: 1161000 m\u003c/div\u003e",
   "className": "grid-edge-marker",
 });
         
     
-                marker_299132d791cef7d59b323cddbdf287c0.setIcon(div_icon_9cca6e98b28b7e0469694c0fb2272112);
+                marker_b848dffe00f81e61aa563143d5b116eb.setIcon(div_icon_10659cef66158009702474461c52797c);
             
     
-            feature_group_417f954bc570555c8473174e7c548f01.addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7.addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
         
     
-            var layer_control_469430bfb935227d3618430657c0ce49_layers = {
+            var layer_control_6d314b50d32ea8ffc7175a74dc528b9a_layers = {
                 base_layers : {
-                    "OpenStreetMap (Est\u00e1ndar)" : tile_layer_93b3bbed5c5278fcbd3ee9e7fb6c470b,
-                    "CartoDB Positron (Modo Claro)" : tile_layer_3680646afeb3f4c84544a7b014a61cbd,
-                    "CartoDB Dark Matter (Modo Oscuro)" : tile_layer_a3c8d3fa81376e8afbe2a649bfa8cbf1,
-                    "Esri Satellite HD" : tile_layer_25be6a0c976968659943621479739bc0,
-                    "Esri Topogr\u00e1fico" : tile_layer_43e3570dc862c8f765f08d47285cecc2,
-                    "Google Satellite" : tile_layer_5ba49f7a178086fae811d484ca7df52e,
-                    "Google Maps (Calles)" : tile_layer_84ea7cb6568a79aa8458d7fe0008bd6d,
+                    "OpenStreetMap (Est\u00e1ndar)" : tile_layer_a16cc8a736d086f6b4710fb23dad96de,
+                    "CartoDB Positron (Modo Claro)" : tile_layer_3b3ecca7705f2c523cd498dea453935d,
+                    "CartoDB Dark Matter (Modo Oscuro)" : tile_layer_fe93f6820876c7a44c2b55ba94dc6b42,
+                    "Esri Satellite HD" : tile_layer_d7a303db3d2a21d346ffea9d49e828b6,
+                    "Esri Topogr\u00e1fico" : tile_layer_5110727bb5f45665630c73b49ae84eac,
+                    "Google Satellite" : tile_layer_e16d8dcf220b5f73ce87e28c7fea9cff,
+                    "Google Maps (Calles)" : tile_layer_de5abc738800f08c873eec6c99ab849c,
                 },
                 overlays :  {
-                    "\ud83d\udccd Puntos de Localizaci\u00f3n" : feature_group_fac9b42a645c0dddfbb5c9c074b04c5d,
-                    "\ud83d\udccf Polil\u00edneas" : feature_group_4e7baaceace330f157d1c7475f1b4305,
-                    "\u2b55 C\u00edrculos" : feature_group_4ea99ef23785c9b312870f125c002bb3,
-                    "\ud83d\udea9 Per\u00edmetro RF (Curva Suave)" : feature_group_13685c63b0f549b084cfbf1b9013f42b,
-                    "\ud83d\udccc V\u00e9rtices Per\u00edmetro RF (Marcadores)" : feature_group_3870f38c251edfe565c5bf130339038f,
-                    "\ud83d\udd25 Patr\u00f3n de Radiaci\u00f3n (Heatmap RF)" : feature_group_aefeeabe6213cf9a3110dea65e772eaa,
-                    "\ud83c\udf10 Grilla UTM (m)" : feature_group_417f954bc570555c8473174e7c548f01,
+                    "\ud83d\udccd Puntos de Localizaci\u00f3n" : feature_group_ddc7ba0e01ee2f40637512972720f0d7,
+                    "\ud83d\udccf Polil\u00edneas" : feature_group_b2a342ed951c61889d9bfeffe1c108be,
+                    "\u2b55 C\u00edrculos" : feature_group_c219fc3fbcd84164a932173c0bc28cd1,
+                    "\ud83d\udea9 Per\u00edmetro RF (Curva Suave)" : feature_group_e0b2f0cd7fdcb76c3e6e3b6d788db9a6,
+                    "\ud83d\udccc V\u00e9rtices Per\u00edmetro RF (Marcadores)" : feature_group_9f8dccc92c7101ac1a1bf6dc352d3f51,
+                    "\ud83d\udd25 Patr\u00f3n de Radiaci\u00f3n (Heatmap RF)" : feature_group_9b0eb241e2c9127043988e19e34f9d86,
+                    "\ud83c\udf10 Grilla UTM (m)" : feature_group_b9d6a05d3e90ea2fa8b8644b0018b0b7,
                 },
             };
-            let layer_control_469430bfb935227d3618430657c0ce49 = L.control.layers(
-                layer_control_469430bfb935227d3618430657c0ce49_layers.base_layers,
-                layer_control_469430bfb935227d3618430657c0ce49_layers.overlays,
+            let layer_control_6d314b50d32ea8ffc7175a74dc528b9a = L.control.layers(
+                layer_control_6d314b50d32ea8ffc7175a74dc528b9a_layers.base_layers,
+                layer_control_6d314b50d32ea8ffc7175a74dc528b9a_layers.overlays,
                 {
   "position": "topright",
   "collapsed": false,
   "autoZIndex": true,
 }
-            ).addTo(map_465b3dd3bea586abfdc0ef0f47e00667);
+            ).addTo(map_ee99828b825dfc103e8c707d6f4cb47d);
 
         
     
-            var mouse_position_fac393dae625a45e2135ba7578602858 = new L.Control.MousePosition(
+            var mouse_position_f3fb292c92a06ff700ca8026c23c640e = new L.Control.MousePosition(
                 {
   "position": "topright",
   "separator": " | ",
@@ -1480,14 +1488,14 @@
   "prefix": "Coordenadas:",
 }
             );
-            mouse_position_fac393dae625a45e2135ba7578602858.options["latFormatter"] =
+            mouse_position_f3fb292c92a06ff700ca8026c23c640e.options["latFormatter"] =
                 function(num) {return L.Util.formatNum(num, 6) + ' º ';};;
-            mouse_position_fac393dae625a45e2135ba7578602858.options["lngFormatter"] =
+            mouse_position_f3fb292c92a06ff700ca8026c23c640e.options["lngFormatter"] =
                 function(num) {return L.Util.formatNum(num, 6) + ' º ';};;
-            map_465b3dd3bea586abfdc0ef0f47e00667.addControl(mouse_position_fac393dae625a45e2135ba7578602858);
+            map_ee99828b825dfc103e8c707d6f4cb47d.addControl(mouse_position_f3fb292c92a06ff700ca8026c23c640e);
         
     
-            var measure_control_5d7366a5aebde37a0a6d59d73b6470f0 = new L.Control.Measure(
+            var measure_control_e93cffd3193b2add506268c7c23a3098 = new L.Control.Measure(
                 {
   "position": "bottomleft",
   "primaryLengthUnit": "meters",
@@ -1495,7 +1503,7 @@
   "primaryAreaUnit": "sqmeters",
   "secondaryAreaUnit": "acres",
 });
-            map_465b3dd3bea586abfdc0ef0f47e00667.addControl(measure_control_5d7366a5aebde37a0a6d59d73b6470f0);
+            map_ee99828b825dfc103e8c707d6f4cb47d.addControl(measure_control_e93cffd3193b2add506268c7c23a3098);
 
             // Workaround for using this plugin with Leaflet>=1.8.0
             // https://github.com/ljagis/leaflet-measure/issues/171
@@ -1514,12 +1522,12 @@
 
         
     
-            var tile_layer_c50d68c3fc5815bb385f62420fc0e83d = L.tileLayer(
+            var tile_layer_6e517abc5b52d910634a0f8cc783b569 = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {"attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors", "detect_retina": false, "max_native_zoom": 19, "max_zoom": 19, "min_zoom": 0, "no_wrap": false, "opacity": 1, "subdomains": "abc", "tms": false}
             );
-            var mini_map_cd5b7cf928f1c0faa752e7ab88f17ebe = new L.Control.MiniMap(
-                tile_layer_c50d68c3fc5815bb385f62420fc0e83d,
+            var mini_map_65fcd5420f04f381c793a49e9a106205 = new L.Control.MiniMap(
+                tile_layer_6e517abc5b52d910634a0f8cc783b569,
                 {
   "position": "bottomleft",
   "width": 150,
@@ -1534,7 +1542,7 @@
   "minimized": false,
 }
             );
-            map_465b3dd3bea586abfdc0ef0f47e00667.addControl(mini_map_cd5b7cf928f1c0faa752e7ab88f17ebe);
+            map_ee99828b825dfc103e8c707d6f4cb47d.addControl(mini_map_65fcd5420f04f381c793a49e9a106205);
         
     
             var options = {
@@ -1543,16 +1551,16 @@
               edit: {},
             }
                 // FeatureGroup is to store editable layers.
-                var drawnItems_draw_control_bca27de8fb27c022e572567e6cac3816 =
+                var drawnItems_draw_control_98690f43bb5681e53eb3dcccf14cc41b =
                     new L.featureGroup().addTo(
-                        map_465b3dd3bea586abfdc0ef0f47e00667
+                        map_ee99828b825dfc103e8c707d6f4cb47d
                     );
 
-            options.edit.featureGroup = drawnItems_draw_control_bca27de8fb27c022e572567e6cac3816;
-            var draw_control_bca27de8fb27c022e572567e6cac3816 = new L.Control.Draw(
+            options.edit.featureGroup = drawnItems_draw_control_98690f43bb5681e53eb3dcccf14cc41b;
+            var draw_control_98690f43bb5681e53eb3dcccf14cc41b = new L.Control.Draw(
                 options
-            ).addTo( map_465b3dd3bea586abfdc0ef0f47e00667 );
-            map_465b3dd3bea586abfdc0ef0f47e00667.on(L.Draw.Event.CREATED, function(e) {
+            ).addTo( map_ee99828b825dfc103e8c707d6f4cb47d );
+            map_ee99828b825dfc103e8c707d6f4cb47d.on(L.Draw.Event.CREATED, function(e) {
                 var layer = e.layer,
                     type = e.layerType;
                 var coords = JSON.stringify(layer.toGeoJSON());
@@ -1560,15 +1568,15 @@
                     alert(coords);
                     console.log(coords);
                 });
-                drawnItems_draw_control_bca27de8fb27c022e572567e6cac3816.addLayer(layer);
+                drawnItems_draw_control_98690f43bb5681e53eb3dcccf14cc41b.addLayer(layer);
             });
-            map_465b3dd3bea586abfdc0ef0f47e00667.on('draw:created', function(e) {
-                drawnItems_draw_control_bca27de8fb27c022e572567e6cac3816.addLayer(e.layer);
+            map_ee99828b825dfc103e8c707d6f4cb47d.on('draw:created', function(e) {
+                drawnItems_draw_control_98690f43bb5681e53eb3dcccf14cc41b.addLayer(e.layer);
             });
 
             
             document.getElementById('export').onclick = function(e) {
-                var data = drawnItems_draw_control_bca27de8fb27c022e572567e6cac3816.toGeoJSON();
+                var data = drawnItems_draw_control_98690f43bb5681e53eb3dcccf14cc41b.toGeoJSON();
                 var convertedData = 'text/json;charset=utf-8,'
                     + encodeURIComponent(JSON.stringify(data));
                 document.getElementById('export').setAttribute(

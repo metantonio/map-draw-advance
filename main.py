@@ -170,11 +170,11 @@ def agregar_grilla(group, grid_step=1.0, bounds=None, coord_system='wgs84'):
                 color="#2563eb",
                 opacity=0.6,
                 dash_array="4, 4",
-                tooltip=f"Latitud: {lat_val:.2f}º"
+                tooltip=f"Latitud: {lat_val:.4f}º"
             ).add_to(group)
 
             hemi_n = 'N' if lat_val >= 0 else 'S'
-            lbl_lat = f"{abs(lat_val):.2f}º {hemi_n}"
+            lbl_lat = f"{abs(lat_val):.4f}º {hemi_n}"
 
             # Etiqueta Borde Izquierdo
             folium.Marker(
@@ -205,11 +205,11 @@ def agregar_grilla(group, grid_step=1.0, bounds=None, coord_system='wgs84'):
                 color="#2563eb",
                 opacity=0.6,
                 dash_array="4, 4",
-                tooltip=f"Longitud: {lon_val:.2f}º"
+                tooltip=f"Longitud: {lon_val:.4f}º"
             ).add_to(group)
 
             hemi_e = 'E' if lon_val >= 0 else 'W'
-            lbl_lon = f"{abs(lon_val):.2f}º {hemi_e}"
+            lbl_lon = f"{abs(lon_val):.4f}º {hemi_e}"
 
             # Etiqueta Borde Superior
             folium.Marker(
@@ -322,8 +322,8 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     
     initial_center = valid_initial[0] if valid_initial else default_location
 
-    # Inicializar Folium Map con tiles=None para evitar capas duplicadas
-    myMap = folium.Map(location=initial_center, zoom_start=12, control_scale=True, tiles=None)
+    # Inicializar Folium Map con tiles=None y Zoom Suave Intermedio (zoom_snap=0.25)
+    myMap = folium.Map(location=initial_center, zoom_start=12, control_scale=True, tiles=None, zoom_snap=0.25, zoom_delta=0.25)
 
     # Añadir Capas Base Estándar
     folium.TileLayer('openstreetmap', name='OpenStreetMap (Estándar)').add_to(myMap)
@@ -620,11 +620,14 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
 
             var stepM = 100000;
             if (zoom >= 17) stepM = 100;
+            else if (zoom >= 16) stepM = 250;
             else if (zoom >= 15) stepM = 500;
-            else if (zoom >= 13) stepM = 1000;
-            else if (zoom >= 11) stepM = 5000;
-            else if (zoom >= 9) stepM = 10000;
-            else if (zoom >= 7) stepM = 50000;
+            else if (zoom >= 14) stepM = 1000;
+            else if (zoom >= 13) stepM = 2500;
+            else if (zoom >= 12) stepM = 5000;
+            else if (zoom >= 10) stepM = 10000;
+            else if (zoom >= 8) stepM = 25000;
+            else if (zoom >= 6) stepM = 50000;
 
             var startE = Math.floor(eMin / stepM) * stepM;
             var endE = Math.ceil(eMax / stepM) * stepM;
@@ -698,11 +701,14 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
         }} else {{
             // Sistema WGS-84
             var stepDeg = 1.0;
-            if (zoom >= 16) stepDeg = 0.001;
+            if (zoom >= 17) stepDeg = 0.001;
+            else if (zoom >= 15) stepDeg = 0.002;
             else if (zoom >= 14) stepDeg = 0.005;
-            else if (zoom >= 12) stepDeg = 0.01;
+            else if (zoom >= 13) stepDeg = 0.01;
+            else if (zoom >= 11) stepDeg = 0.02;
             else if (zoom >= 10) stepDeg = 0.05;
             else if (zoom >= 8) stepDeg = 0.1;
+            else if (zoom >= 7) stepDeg = 0.2;
             else if (zoom >= 6) stepDeg = 0.5;
 
             var startLat = Math.floor(south / stepDeg) * stepDeg;
@@ -722,7 +728,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
                 }}).addTo(dynamicGridLayerGroup);
 
                 var hemiN = latVal >= 0 ? "N" : "S";
-                var lblLat = Math.abs(latVal).toFixed(2) + "º " + hemiN;
+                var lblLat = Math.abs(latVal).toFixed(4) + "º " + hemiN;
 
                 // Borde Izquierdo (Interno)
                 L.marker([latVal, lftLon], {{
@@ -751,7 +757,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
                 }}).addTo(dynamicGridLayerGroup);
 
                 var hemiE = lonVal >= 0 ? "E" : "W";
-                var lblLon = Math.abs(lonVal).toFixed(2) + "º " + hemiE;
+                var lblLon = Math.abs(lonVal).toFixed(4) + "º " + hemiE;
 
                 // Borde Superior (Interno)
                 L.marker([topLat, lonVal], {{
