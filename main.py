@@ -526,30 +526,279 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     formatoMouse(myMap)
     myMap.add_child(MeasureControl(position='bottomleft'))
     myMap.add_child(MiniMap(toggle_display=True, position='bottomleft'))
-    Fullscreen(position='topleft', title='Pantalla Completa', title_cancel='Salir Pantalla Completa').add_to(myMap)
     Draw(export=True, filename='mis_dibujos.geojson', position='topleft').add_to(myMap)
 
-    # Inyectar Script para Forzar Invalidador de Tamaño de Mapa Leaflet
-    resize_js = """
+    # Inyectar Script para Forzar Invalidador de Tamaño de Mapa Leaflet y Grilla Dinámica Adaptativa al Zoom y PDF
+    grid_js = f"""
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
     <script>
-    function fixLeafletMapSize() {
-        for (var key in window) {
-            try {
-                if (window[key] && window[key] instanceof L.Map) {
+    window.MAP_COORD_SYSTEM = "{coord_system}";
+
+    function latLonToUtmJS(lat, lon) {{
+        var clampedLon = Math.max(-179.99999, Math.min(179.99999, lon));
+        var clampedLat = Math.max(-80.0, Math.min(84.0, lat));
+        var zone = Math.floor((clampedLon + 180) / 6) + 1;
+        zone = Math.max(1, Math.min(60, zone));
+        var south = clampedLat < 0;
+        try {{
+            var projStr = "+proj=utm +zone=" + zone + (south ? " +south" : "") + " +datum=WGS84 +units=m +no_defs";
+            var res = proj4("EPSG:4326", projStr, [clampedLon, clampedLat]);
+            return {{ easting: res[0], northing: res[1], zone: zone + (south ? "S" : "N") }};
+        }} catch(e) {{
+            return {{ easting: 0, northing: 0, zone: zone }};
+        }}
+    }}
+
+    function utmToLatLonJS(easting, northing, zoneStr) {{
+        var zoneNum = parseInt(zoneStr);
+        var south = (zoneStr + "").indexOf("S") !== -1;
+        try {{
+            var projStr = "+proj=utm +zone=" + zoneNum + (south ? " +south" : "") + " +datum=WGS84 +units=m +no_defs";
+            var res = proj4(projStr, "EPSG:4326", [easting, northing]);
+            return {{ lat: res[1], lon: res[0] }};
+        }} catch(e) {{
+            return {{ lat: 0, lon: 0 }};
+        }}
+    }}
+
+    var dynamicGridLayerGroup = null;
+
+    function fixLeafletMapSize() {{
+        for (var key in window) {{
+            try {{
+                if (window[key] && window[key] instanceof L.Map) {{
                     window[key].invalidateSize();
-                }
-            } catch(e) {}
-        }
-    }
-    window.addEventListener('load', function() {
-        setTimeout(fixLeafletMapSize, 100);
-        setTimeout(fixLeafletMapSize, 400);
-        setTimeout(fixLeafletMapSize, 1000);
-    });
+                }}
+            }} catch(e) {{}}
+        }}
+        updateGridEdgeBounds();
+    }}
+
+    function updateGridEdgeBounds() {{
+        var mapObj = null;
+        for (var key in window) {{
+            try {{
+                if (window[key] && window[key] instanceof L.Map) {{
+                    mapObj = window[key];
+                    break;
+                }}
+            }} catch(e) {{}}
+        }}
+        if (!mapObj) return;
+
+        if (!dynamicGridLayerGroup) {{
+            dynamicGridLayerGroup = L.layerGroup().addTo(mapObj);
+        }} else {{
+            dynamicGridLayerGroup.clearLayers();
+        }}
+
+        var bounds = mapObj.getBounds();
+        var south = bounds.getSouth();
+        var north = bounds.getNorth();
+        var west = bounds.getWest();
+        var east = bounds.getEast();
+        var zoom = mapObj.getZoom();
+
+        var sz = mapObj.getSize();
+        var pad = 14;
+        var topLat = mapObj.containerPointToLatLng([sz.x / 2, pad]).lat;
+        var botLat = mapObj.containerPointToLatLng([sz.x / 2, sz.y - pad]).lat;
+        var lftLon = mapObj.containerPointToLatLng([pad, sz.y / 2]).lng;
+        var rgtLon = mapObj.containerPointToLatLng([sz.x - pad, sz.y / 2]).lng;
+
+        var system = (window.MAP_COORD_SYSTEM || "wgs84").toLowerCase();
+
+        if (system === "utm") {{
+            var swUtm = latLonToUtmJS(south, west);
+            var neUtm = latLonToUtmJS(north, east);
+            var zoneStr = swUtm.zone;
+
+            var eMin = Math.min(swUtm.easting, neUtm.easting);
+            var eMax = Math.max(swUtm.easting, neUtm.easting);
+            var nMin = Math.min(swUtm.northing, neUtm.northing);
+            var nMax = Math.max(swUtm.northing, neUtm.northing);
+
+            var stepM = 100000;
+            if (zoom >= 17) stepM = 100;
+            else if (zoom >= 15) stepM = 500;
+            else if (zoom >= 13) stepM = 1000;
+            else if (zoom >= 11) stepM = 5000;
+            else if (zoom >= 9) stepM = 10000;
+            else if (zoom >= 7) stepM = 50000;
+
+            var startE = Math.floor(eMin / stepM) * stepM;
+            var endE = Math.ceil(eMax / stepM) * stepM;
+            var startN = Math.floor(nMin / stepM) * stepM;
+            var endN = Math.ceil(nMax / stepM) * stepM;
+
+            var maxLines = 30;
+            var eCount = Math.floor((endE - startE) / stepM);
+            if (eCount > maxLines) stepM *= Math.ceil(eCount / maxLines);
+
+            // Líneas Verticales UTM (Este)
+            for (var eVal = startE; eVal <= endE; eVal += stepM) {{
+                var ptBot = utmToLatLonJS(eVal, nMin, zoneStr);
+                var ptTop = utmToLatLonJS(eVal, nMax, zoneStr);
+
+                L.polyline([[ptBot.lat, ptBot.lon], [ptTop.lat, ptTop.lon]], {{
+                    color: "#059669", weight: 1.5, opacity: 0.6, dashArray: "4, 4"
+                }}).addTo(dynamicGridLayerGroup);
+
+                var eLbl = "E: " + Math.round(eVal).toLocaleString() + " m";
+
+                // Borde Superior (Interno)
+                L.marker([topLat, ptTop.lon], {{
+                    icon: L.divIcon({{
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-top">' + eLbl + '</div>'
+                    }})
+                }}).addTo(dynamicGridLayerGroup);
+
+                // Borde Inferior (Interno)
+                L.marker([botLat, ptBot.lon], {{
+                    icon: L.divIcon({{
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-bottom">' + eLbl + '</div>'
+                    }})
+                }}).addTo(dynamicGridLayerGroup);
+            }}
+
+            // Líneas Horizontales UTM (Norte)
+            for (var nVal = startN; nVal <= endN; nVal += stepM) {{
+                var ptLft = utmToLatLonJS(eMin, nVal, zoneStr);
+                var ptRgt = utmToLatLonJS(eMax, nVal, zoneStr);
+
+                L.polyline([[ptLft.lat, ptLft.lon], [ptRgt.lat, ptRgt.lon]], {{
+                    color: "#059669", weight: 1.5, opacity: 0.6, dashArray: "4, 4"
+                }}).addTo(dynamicGridLayerGroup);
+
+                var nLbl = "N: " + Math.round(nVal).toLocaleString() + " m";
+
+                // Borde Izquierdo (Interno)
+                L.marker([ptLft.lat, lftLon], {{
+                    icon: L.divIcon({{
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-left">' + nLbl + '</div>'
+                    }})
+                }}).addTo(dynamicGridLayerGroup);
+
+                // Borde Derecho (Interno)
+                L.marker([ptRgt.lat, rgtLon], {{
+                    icon: L.divIcon({{
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-right">' + nLbl + '</div>'
+                    }})
+                }}).addTo(dynamicGridLayerGroup);
+            }}
+
+        }} else {{
+            // Sistema WGS-84
+            var stepDeg = 1.0;
+            if (zoom >= 16) stepDeg = 0.001;
+            else if (zoom >= 14) stepDeg = 0.005;
+            else if (zoom >= 12) stepDeg = 0.01;
+            else if (zoom >= 10) stepDeg = 0.05;
+            else if (zoom >= 8) stepDeg = 0.1;
+            else if (zoom >= 6) stepDeg = 0.5;
+
+            var startLat = Math.floor(south / stepDeg) * stepDeg;
+            var endLat = Math.ceil(north / stepDeg) * stepDeg;
+            var startLon = Math.floor(west / stepDeg) * stepDeg;
+            var endLon = Math.ceil(east / stepDeg) * stepDeg;
+
+            var maxLines = 30;
+            var latCount = Math.floor((endLat - startLat) / stepDeg);
+            if (latCount > maxLines) stepDeg *= Math.ceil(latCount / maxLines);
+
+            // Líneas de Latitud (Horizontales)
+            for (var lat = startLat; lat <= endLat; lat += stepDeg) {{
+                var latVal = parseFloat(lat.toFixed(6));
+                L.polyline([[latVal, west], [latVal, east]], {{
+                    color: "#2563eb", weight: 1.5, opacity: 0.6, dashArray: "4, 4"
+                }}).addTo(dynamicGridLayerGroup);
+
+                var hemiN = latVal >= 0 ? "N" : "S";
+                var lblLat = Math.abs(latVal).toFixed(4) + "º " + hemiN;
+
+                // Borde Izquierdo (Interno)
+                L.marker([latVal, lftLon], {{
+                    icon: L.divIcon({{
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-left">' + lblLat + '</div>'
+                    }})
+                }}).addTo(dynamicGridLayerGroup);
+
+                // Borde Derecho (Interno)
+                L.marker([latVal, rgtLon], {{
+                    icon: L.divIcon({{
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-right">' + lblLat + '</div>'
+                    }})
+                }}).addTo(dynamicGridLayerGroup);
+            }}
+
+            // Líneas de Longitud (Verticales)
+            for (var lon = startLon; lon <= endLon; lon += stepDeg) {{
+                var lonVal = parseFloat(lon.toFixed(6));
+                L.polyline([[south, lonVal], [north, lonVal]], {{
+                    color: "#2563eb", weight: 1.5, opacity: 0.6, dashArray: "4, 4"
+                }}).addTo(dynamicGridLayerGroup);
+
+                var hemiE = lonVal >= 0 ? "E" : "W";
+                var lblLon = Math.abs(lonVal).toFixed(4) + "º " + hemiE;
+
+                // Borde Superior (Interno)
+                L.marker([topLat, lonVal], {{
+                    icon: L.divIcon({{
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-top">' + lblLon + '</div>'
+                    }})
+                }}).addTo(dynamicGridLayerGroup);
+
+                // Borde Inferior (Interno)
+                L.marker([botLat, lonVal], {{
+                    icon: L.divIcon({{
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-bottom">' + lblLon + '</div>'
+                    }})
+                }}).addTo(dynamicGridLayerGroup);
+            }}
+        }}
+    }}
+
+    function initDynamicGridListener() {{
+        for (var key in window) {{
+            try {{
+                if (window[key] && window[key] instanceof L.Map) {{
+                    var map = window[key];
+                    map.off('moveend zoomend resize', updateGridEdgeBounds);
+                    map.on('moveend zoomend resize', updateGridEdgeBounds);
+                    updateGridEdgeBounds();
+                    break;
+                }}
+            }} catch(e) {{}}
+        }}
+    }}
+
+    window.addEventListener('load', function() {{
+        setTimeout(initDynamicGridListener, 100);
+        setTimeout(initDynamicGridListener, 400);
+        setTimeout(initDynamicGridListener, 1000);
+    }});
+
     window.addEventListener('resize', fixLeafletMapSize);
+    window.addEventListener('beforeprint', fixLeafletMapSize);
     </script>
     """
-    myMap.get_root().html.add_child(folium.Element(resize_js))
+    myMap.get_root().html.add_child(folium.Element(grid_js))
 
     # Guardar mapa en ruta absoluta
     abs_output = os.path.abspath(output_file)

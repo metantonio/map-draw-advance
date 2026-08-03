@@ -129,10 +129,10 @@ def leyenda(htmlMap, map_title="Map Draw Advance", cajetin_info=None, puntos_caj
         display: inline-block !important;
       }}
 
-      .grid-edge-top {{ transform: translate(-50%, -100%); margin-top: -2px; }}
-      .grid-edge-bottom {{ transform: translate(-50%, 0%); margin-top: 2px; }}
-      .grid-edge-left {{ transform: translate(-100%, -50%); margin-left: -2px; }}
-      .grid-edge-right {{ transform: translate(0%, -50%); margin-left: 2px; }}
+      .grid-edge-top {{ transform: translate(-50%, 0%); margin-top: 2px; }}
+      .grid-edge-bottom {{ transform: translate(-50%, -100%); margin-top: -2px; }}
+      .grid-edge-left {{ transform: translate(0%, -50%); margin-left: 2px; }}
+      .grid-edge-right {{ transform: translate(-100%, -50%); margin-left: -2px; }}
 
       /* ESTILOS DE IMPRESIÓN Y EXPORTACIÓN PDF */
       @media print {{

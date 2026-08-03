@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_14fe5b8cd1b45d9b801ac932539b26f4 {
+                #map_02b7b53cbfe09fbcaaecc12b18c9aecd {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -56,15 +56,45 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/ljagis/leaflet-measure@2.1.7/dist/leaflet-measure.min.css"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-minimap/3.6.1/Control.MiniMap.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-minimap/3.6.1/Control.MiniMap.css"/>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@3.0.0/Control.FullScreen.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@3.0.0/Control.FullScreen.css"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.2/leaflet.draw.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.2/leaflet.draw.css"/>
 </head>
 <body>
     
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
     <script>
+    window.MAP_COORD_SYSTEM = "utm";
+
+    function latLonToUtmJS(lat, lon) {
+        var clampedLon = Math.max(-179.99999, Math.min(179.99999, lon));
+        var clampedLat = Math.max(-80.0, Math.min(84.0, lat));
+        var zone = Math.floor((clampedLon + 180) / 6) + 1;
+        zone = Math.max(1, Math.min(60, zone));
+        var south = clampedLat < 0;
+        try {
+            var projStr = "+proj=utm +zone=" + zone + (south ? " +south" : "") + " +datum=WGS84 +units=m +no_defs";
+            var res = proj4("EPSG:4326", projStr, [clampedLon, clampedLat]);
+            return { easting: res[0], northing: res[1], zone: zone + (south ? "S" : "N") };
+        } catch(e) {
+            return { easting: 0, northing: 0, zone: zone };
+        }
+    }
+
+    function utmToLatLonJS(easting, northing, zoneStr) {
+        var zoneNum = parseInt(zoneStr);
+        var south = (zoneStr + "").indexOf("S") !== -1;
+        try {
+            var projStr = "+proj=utm +zone=" + zoneNum + (south ? " +south" : "") + " +datum=WGS84 +units=m +no_defs";
+            var res = proj4(projStr, "EPSG:4326", [easting, northing]);
+            return { lat: res[1], lon: res[0] };
+        } catch(e) {
+            return { lat: 0, lon: 0 };
+        }
+    }
+
+    var dynamicGridLayerGroup = null;
+
     function fixLeafletMapSize() {
         for (var key in window) {
             try {
@@ -73,17 +103,235 @@
                 }
             } catch(e) {}
         }
+        updateGridEdgeBounds();
     }
+
+    function updateGridEdgeBounds() {
+        var mapObj = null;
+        for (var key in window) {
+            try {
+                if (window[key] && window[key] instanceof L.Map) {
+                    mapObj = window[key];
+                    break;
+                }
+            } catch(e) {}
+        }
+        if (!mapObj) return;
+
+        if (!dynamicGridLayerGroup) {
+            dynamicGridLayerGroup = L.layerGroup().addTo(mapObj);
+        } else {
+            dynamicGridLayerGroup.clearLayers();
+        }
+
+        var bounds = mapObj.getBounds();
+        var south = bounds.getSouth();
+        var north = bounds.getNorth();
+        var west = bounds.getWest();
+        var east = bounds.getEast();
+        var zoom = mapObj.getZoom();
+
+        var sz = mapObj.getSize();
+        var pad = 14;
+        var topLat = mapObj.containerPointToLatLng([sz.x / 2, pad]).lat;
+        var botLat = mapObj.containerPointToLatLng([sz.x / 2, sz.y - pad]).lat;
+        var lftLon = mapObj.containerPointToLatLng([pad, sz.y / 2]).lng;
+        var rgtLon = mapObj.containerPointToLatLng([sz.x - pad, sz.y / 2]).lng;
+
+        var system = (window.MAP_COORD_SYSTEM || "wgs84").toLowerCase();
+
+        if (system === "utm") {
+            var swUtm = latLonToUtmJS(south, west);
+            var neUtm = latLonToUtmJS(north, east);
+            var zoneStr = swUtm.zone;
+
+            var eMin = Math.min(swUtm.easting, neUtm.easting);
+            var eMax = Math.max(swUtm.easting, neUtm.easting);
+            var nMin = Math.min(swUtm.northing, neUtm.northing);
+            var nMax = Math.max(swUtm.northing, neUtm.northing);
+
+            var stepM = 100000;
+            if (zoom >= 17) stepM = 100;
+            else if (zoom >= 15) stepM = 500;
+            else if (zoom >= 13) stepM = 1000;
+            else if (zoom >= 11) stepM = 5000;
+            else if (zoom >= 9) stepM = 10000;
+            else if (zoom >= 7) stepM = 50000;
+
+            var startE = Math.floor(eMin / stepM) * stepM;
+            var endE = Math.ceil(eMax / stepM) * stepM;
+            var startN = Math.floor(nMin / stepM) * stepM;
+            var endN = Math.ceil(nMax / stepM) * stepM;
+
+            var maxLines = 30;
+            var eCount = Math.floor((endE - startE) / stepM);
+            if (eCount > maxLines) stepM *= Math.ceil(eCount / maxLines);
+
+            // Líneas Verticales UTM (Este)
+            for (var eVal = startE; eVal <= endE; eVal += stepM) {
+                var ptBot = utmToLatLonJS(eVal, nMin, zoneStr);
+                var ptTop = utmToLatLonJS(eVal, nMax, zoneStr);
+
+                L.polyline([[ptBot.lat, ptBot.lon], [ptTop.lat, ptTop.lon]], {
+                    color: "#059669", weight: 1.5, opacity: 0.6, dashArray: "4, 4"
+                }).addTo(dynamicGridLayerGroup);
+
+                var eLbl = "E: " + Math.round(eVal).toLocaleString() + " m";
+
+                // Borde Superior (Interno)
+                L.marker([topLat, ptTop.lon], {
+                    icon: L.divIcon({
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-top">' + eLbl + '</div>'
+                    })
+                }).addTo(dynamicGridLayerGroup);
+
+                // Borde Inferior (Interno)
+                L.marker([botLat, ptBot.lon], {
+                    icon: L.divIcon({
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-bottom">' + eLbl + '</div>'
+                    })
+                }).addTo(dynamicGridLayerGroup);
+            }
+
+            // Líneas Horizontales UTM (Norte)
+            for (var nVal = startN; nVal <= endN; nVal += stepM) {
+                var ptLft = utmToLatLonJS(eMin, nVal, zoneStr);
+                var ptRgt = utmToLatLonJS(eMax, nVal, zoneStr);
+
+                L.polyline([[ptLft.lat, ptLft.lon], [ptRgt.lat, ptRgt.lon]], {
+                    color: "#059669", weight: 1.5, opacity: 0.6, dashArray: "4, 4"
+                }).addTo(dynamicGridLayerGroup);
+
+                var nLbl = "N: " + Math.round(nVal).toLocaleString() + " m";
+
+                // Borde Izquierdo (Interno)
+                L.marker([ptLft.lat, lftLon], {
+                    icon: L.divIcon({
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-left">' + nLbl + '</div>'
+                    })
+                }).addTo(dynamicGridLayerGroup);
+
+                // Borde Derecho (Interno)
+                L.marker([ptRgt.lat, rgtLon], {
+                    icon: L.divIcon({
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-right">' + nLbl + '</div>'
+                    })
+                }).addTo(dynamicGridLayerGroup);
+            }
+
+        } else {
+            // Sistema WGS-84
+            var stepDeg = 1.0;
+            if (zoom >= 16) stepDeg = 0.001;
+            else if (zoom >= 14) stepDeg = 0.005;
+            else if (zoom >= 12) stepDeg = 0.01;
+            else if (zoom >= 10) stepDeg = 0.05;
+            else if (zoom >= 8) stepDeg = 0.1;
+            else if (zoom >= 6) stepDeg = 0.5;
+
+            var startLat = Math.floor(south / stepDeg) * stepDeg;
+            var endLat = Math.ceil(north / stepDeg) * stepDeg;
+            var startLon = Math.floor(west / stepDeg) * stepDeg;
+            var endLon = Math.ceil(east / stepDeg) * stepDeg;
+
+            var maxLines = 30;
+            var latCount = Math.floor((endLat - startLat) / stepDeg);
+            if (latCount > maxLines) stepDeg *= Math.ceil(latCount / maxLines);
+
+            // Líneas de Latitud (Horizontales)
+            for (var lat = startLat; lat <= endLat; lat += stepDeg) {
+                var latVal = parseFloat(lat.toFixed(6));
+                L.polyline([[latVal, west], [latVal, east]], {
+                    color: "#2563eb", weight: 1.5, opacity: 0.6, dashArray: "4, 4"
+                }).addTo(dynamicGridLayerGroup);
+
+                var hemiN = latVal >= 0 ? "N" : "S";
+                var lblLat = Math.abs(latVal).toFixed(4) + "º " + hemiN;
+
+                // Borde Izquierdo (Interno)
+                L.marker([latVal, lftLon], {
+                    icon: L.divIcon({
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-left">' + lblLat + '</div>'
+                    })
+                }).addTo(dynamicGridLayerGroup);
+
+                // Borde Derecho (Interno)
+                L.marker([latVal, rgtLon], {
+                    icon: L.divIcon({
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-right">' + lblLat + '</div>'
+                    })
+                }).addTo(dynamicGridLayerGroup);
+            }
+
+            // Líneas de Longitud (Verticales)
+            for (var lon = startLon; lon <= endLon; lon += stepDeg) {
+                var lonVal = parseFloat(lon.toFixed(6));
+                L.polyline([[south, lonVal], [north, lonVal]], {
+                    color: "#2563eb", weight: 1.5, opacity: 0.6, dashArray: "4, 4"
+                }).addTo(dynamicGridLayerGroup);
+
+                var hemiE = lonVal >= 0 ? "E" : "W";
+                var lblLon = Math.abs(lonVal).toFixed(4) + "º " + hemiE;
+
+                // Borde Superior (Interno)
+                L.marker([topLat, lonVal], {
+                    icon: L.divIcon({
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-top">' + lblLon + '</div>'
+                    })
+                }).addTo(dynamicGridLayerGroup);
+
+                // Borde Inferior (Interno)
+                L.marker([botLat, lonVal], {
+                    icon: L.divIcon({
+                        className: "grid-edge-marker",
+                        iconSize: null,
+                        html: '<div class="grid-edge-label grid-edge-bottom">' + lblLon + '</div>'
+                    })
+                }).addTo(dynamicGridLayerGroup);
+            }
+        }
+    }
+
+    function initDynamicGridListener() {
+        for (var key in window) {
+            try {
+                if (window[key] && window[key] instanceof L.Map) {
+                    var map = window[key];
+                    map.off('moveend zoomend resize', updateGridEdgeBounds);
+                    map.on('moveend zoomend resize', updateGridEdgeBounds);
+                    updateGridEdgeBounds();
+                    break;
+                }
+            } catch(e) {}
+        }
+    }
+
     window.addEventListener('load', function() {
-        setTimeout(fixLeafletMapSize, 100);
-        setTimeout(fixLeafletMapSize, 400);
-        setTimeout(fixLeafletMapSize, 1000);
+        setTimeout(initDynamicGridListener, 100);
+        setTimeout(initDynamicGridListener, 400);
+        setTimeout(initDynamicGridListener, 1000);
     });
+
     window.addEventListener('resize', fixLeafletMapSize);
+    window.addEventListener('beforeprint', fixLeafletMapSize);
     </script>
     
     
-            <div class="folium-map" id="map_14fe5b8cd1b45d9b801ac932539b26f4" ></div>
+            <div class="folium-map" id="map_02b7b53cbfe09fbcaaecc12b18c9aecd" ></div>
         
     
             
@@ -162,44 +410,61 @@
       }
 
       /* ESTILOS ETIQUETAS DE BORDES DE GRILLA */
-      .grid-edge-label {
-        background-color: rgba(15, 23, 42, 0.88) !important;
-        color: #ffffff !important;
-        border: 1px solid #000000 !important;
-        border-radius: 3px !important;
-        font-family: Consolas, Monaco, monospace !important;
-        font-size: 10px !important;
-        font-weight: 700 !important;
-        padding: 2px 5px !important;
-        white-space: nowrap !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important;
-        pointer-events: none !important;
+      .grid-edge-marker {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        z-index: 99999 !important;
       }
 
-      .grid-edge-top { transform: translate(-50%, -100%); margin-top: -2px; }
-      .grid-edge-bottom { transform: translate(-50%, 0%); margin-top: 2px; }
-      .grid-edge-left { transform: translate(-100%, -50%); margin-left: -2px; }
-      .grid-edge-right { transform: translate(0%, -50%); margin-left: 2px; }
+      .grid-edge-label {
+        background-color: #0f172a !important;
+        color: #ffffff !important;
+        border: 1.5px solid #38bdf8 !important;
+        border-radius: 4px !important;
+        font-family: Consolas, Monaco, monospace !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        padding: 3px 6px !important;
+        white-space: nowrap !important;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.4) !important;
+        pointer-events: none !important;
+        display: inline-block !important;
+      }
+
+      .grid-edge-top { transform: translate(-50%, 0%); margin-top: 2px; }
+      .grid-edge-bottom { transform: translate(-50%, -100%); margin-top: -2px; }
+      .grid-edge-left { transform: translate(0%, -50%); margin-left: 2px; }
+      .grid-edge-right { transform: translate(-100%, -50%); margin-left: -2px; }
 
       /* ESTILOS DE IMPRESIÓN Y EXPORTACIÓN PDF */
       @media print {
-        .grid-edge-label {
-          background-color: #ffffff !important;
-          color: #000000 !important;
-          border: 1.5px solid #000000 !important;
-          box-shadow: none !important;
-          font-size: 9px !important;
-          padding: 1px 4px !important;
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
         }
+
         @page {
           size: A4 landscape;
-          margin: 8mm;
+          margin: 6mm;
         }
 
         body {
           background: white !important;
           margin: 0 !important;
           padding: 0 !important;
+        }
+
+        .leaflet-container {
+          background: #ffffff !important;
+        }
+
+        .leaflet-tile {
+          opacity: 1 !important;
+          visibility: visible !important;
+          filter: none !important;
         }
 
         /* ETIQUETAS VISIBLES E IMPRESAS DEBAJO DE LOS MARCADORES */
@@ -215,14 +480,32 @@
           box-shadow: none !important;
         }
 
-        /* ELIMINAR FONDO BLANCO Y SOMBRAS EN ICONOS DE MARCADORES */
+        /* ETIQUETAS DE BORDES DE GRILLA (SIEMPRE VISIBLES CON FONDO BLANCO Y BORDE NEGRO) */
+        .grid-edge-label {
+          display: inline-block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          background: #ffffff !important;
+          background-color: #ffffff !important;
+          color: #000000 !important;
+          border: 2px solid #000000 !important;
+          border-radius: 3px !important;
+          font-weight: 800 !important;
+          font-size: 10px !important;
+          padding: 2px 6px !important;
+          z-index: 9999999 !important;
+          box-shadow: none !important;
+          white-space: nowrap !important;
+        }
+
+        /* ELIMINAR FONDO BLANCO Y SOMBRAS EN ICONOS DE MARCADORES (EXCLUYENDO ETIQUETAS DE GRILLA) */
         .leaflet-marker-shadow {
           display: none !important;
         }
 
-        .leaflet-marker-icon,
+        .leaflet-marker-icon:not(.grid-edge-label),
         .awesome-marker,
-        .leaflet-div-icon,
+        .leaflet-div-icon:not(.grid-edge-label),
         .awesome-marker i {
           background: transparent !important;
           border: none !important;
@@ -444,8 +727,8 @@
 <script>
     
     
-            var map_14fe5b8cd1b45d9b801ac932539b26f4 = L.map(
-                "map_14fe5b8cd1b45d9b801ac932539b26f4",
+            var map_02b7b53cbfe09fbcaaecc12b18c9aecd = L.map(
+                "map_02b7b53cbfe09fbcaaecc12b18c9aecd",
                 {
                     center: [10.48, -66.89],
                     crs: L.CRS.EPSG3857,
@@ -457,13 +740,13 @@
 
                 }
             );
-            L.control.scale().addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            L.control.scale().addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
 
             
 
         
     
-            var tile_layer_e33d5fd148cf1a0ef42b1572648bf052 = L.tileLayer(
+            var tile_layer_2a22d65b58be95f802360a374ea16929 = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -480,10 +763,10 @@
             );
         
     
-            tile_layer_e33d5fd148cf1a0ef42b1572648bf052.addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            tile_layer_2a22d65b58be95f802360a374ea16929.addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
         
     
-            var tile_layer_8e6166ca0681776f86e5578a9a3f14a2 = L.tileLayer(
+            var tile_layer_994d105f0b705e00ab49eb22fa92eb66 = L.tileLayer(
                 "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
                 {
   "minZoom": 0,
@@ -500,10 +783,10 @@
             );
         
     
-            tile_layer_8e6166ca0681776f86e5578a9a3f14a2.addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            tile_layer_994d105f0b705e00ab49eb22fa92eb66.addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
         
     
-            var tile_layer_804268aa87814d5aa8bae8d32e4d0af8 = L.tileLayer(
+            var tile_layer_36976a4f7786547176e09798427aefb8 = L.tileLayer(
                 "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
                 {
   "minZoom": 0,
@@ -520,10 +803,10 @@
             );
         
     
-            tile_layer_804268aa87814d5aa8bae8d32e4d0af8.addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            tile_layer_36976a4f7786547176e09798427aefb8.addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
         
     
-            var tile_layer_29455851e7774785e2e54d6489491873 = L.tileLayer(
+            var tile_layer_330f52e97349bde2aaf844eb2fc7769a = L.tileLayer(
                 "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
                 {
   "minZoom": 0,
@@ -540,10 +823,10 @@
             );
         
     
-            tile_layer_29455851e7774785e2e54d6489491873.addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            tile_layer_330f52e97349bde2aaf844eb2fc7769a.addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
         
     
-            var tile_layer_10c5b1669d1a73212597d7b0e09957e3 = L.tileLayer(
+            var tile_layer_b8ac85b852c5f783dc7547989b0884f2 = L.tileLayer(
                 "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
                 {
   "minZoom": 0,
@@ -560,10 +843,10 @@
             );
         
     
-            tile_layer_10c5b1669d1a73212597d7b0e09957e3.addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            tile_layer_b8ac85b852c5f783dc7547989b0884f2.addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
         
     
-            var tile_layer_117eedcdc7019b8a08597a230c861259 = L.tileLayer(
+            var tile_layer_ca07942544f3ca15d76a840cc0318244 = L.tileLayer(
                 "https://mt1.google.com/vt/lyrs=s\u0026x={x}\u0026y={y}\u0026z={z}",
                 {
   "minZoom": 0,
@@ -580,10 +863,10 @@
             );
         
     
-            tile_layer_117eedcdc7019b8a08597a230c861259.addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            tile_layer_ca07942544f3ca15d76a840cc0318244.addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
         
     
-            var tile_layer_fe5fdc6eb2b02f5d31a802cca771f59c = L.tileLayer(
+            var tile_layer_2c04477c8ac48dc32a3ab32338d12786 = L.tileLayer(
                 "https://mt1.google.com/vt/lyrs=m\u0026x={x}\u0026y={y}\u0026z={z}",
                 {
   "minZoom": 0,
@@ -600,29 +883,29 @@
             );
         
     
-            tile_layer_fe5fdc6eb2b02f5d31a802cca771f59c.addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            tile_layer_2c04477c8ac48dc32a3ab32338d12786.addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
         
     
-            map_14fe5b8cd1b45d9b801ac932539b26f4.fitBounds(
+            map_02b7b53cbfe09fbcaaecc12b18c9aecd.fitBounds(
                 [[10.47, -66.9], [10.49, -66.88]],
                 {}
             );
         
     
-            var feature_group_eff01387a1609f99ff7863b8b372092e = L.featureGroup(
+            var feature_group_6ce9d75d82ddca240a27ecf6f9b5f5fd = L.featureGroup(
                 {
 }
             );
         
     
-            var marker_244f4d46aa1ad480da20f4b6831384ef = L.marker(
+            var marker_c93961492ec89a16ad110861f10dcdea = L.marker(
                 [10.48, -66.89],
                 {
 }
-            ).addTo(feature_group_eff01387a1609f99ff7863b8b372092e);
+            ).addTo(feature_group_6ce9d75d82ddca240a27ecf6f9b5f5fd);
         
     
-            var icon_2c45420fa15047bb7480a2a46e5cfa1d = L.AwesomeMarkers.icon(
+            var icon_42323176704e533da52742f97e4498e2 = L.AwesomeMarkers.icon(
                 {
   "markerColor": "blue",
   "iconColor": "white",
@@ -633,24 +916,24 @@
             );
         
     
-        var popup_15627648011d96c28267cd58894a45b5 = L.popup({
+        var popup_ff3bdc067b1f83fc04cca0e30f3b91bc = L.popup({
   "maxWidth": 300,
 });
 
         
             
-                var html_b001ce21753e28d3e91a98f6f9a58b5c = $(`<div id="html_b001ce21753e28d3e91a98f6f9a58b5c" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: sans-serif; min-width: 180px;">                     <h4 style="margin: 0 0 8px 0; color: #2c3e50;">📍 Punto_1</h4>                     <table style="width: 100%; border-collapse: collapse; font-size: 12px;">                         <tr><td><b>Latitud:</b></td><td>10.480000 º</td></tr>                         <tr><td><b>Longitud:</b></td><td>-66.890000 º</td></tr>                         <tr><td><b>Índice:</b></td><td>#1</td></tr>                     </table>                 </div>                 </div>`)[0];
-                popup_15627648011d96c28267cd58894a45b5.setContent(html_b001ce21753e28d3e91a98f6f9a58b5c);
+                var html_0169b4ebdd8fbfe00aec8ed4673a6f6d = $(`<div id="html_0169b4ebdd8fbfe00aec8ed4673a6f6d" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: sans-serif; min-width: 180px;">                     <h4 style="margin: 0 0 8px 0; color: #2c3e50;">📍 Punto_1</h4>                     <table style="width: 100%; border-collapse: collapse; font-size: 12px;">                         <tr><td><b>Latitud:</b></td><td>10.480000 º</td></tr>                         <tr><td><b>Longitud:</b></td><td>-66.890000 º</td></tr>                         <tr><td><b>Índice:</b></td><td>#1</td></tr>                     </table>                 </div>                 </div>`)[0];
+                popup_ff3bdc067b1f83fc04cca0e30f3b91bc.setContent(html_0169b4ebdd8fbfe00aec8ed4673a6f6d);
             
         
 
-        marker_244f4d46aa1ad480da20f4b6831384ef.bindPopup(popup_15627648011d96c28267cd58894a45b5)
+        marker_c93961492ec89a16ad110861f10dcdea.bindPopup(popup_ff3bdc067b1f83fc04cca0e30f3b91bc)
         ;
 
         
     
     
-            marker_244f4d46aa1ad480da20f4b6831384ef.bindTooltip(
+            marker_c93961492ec89a16ad110861f10dcdea.bindTooltip(
                 `<div style="background-color: rgba(255, 255, 255, 0.92); border: 1px solid #1e293b; border-radius: 4px; color: #0f172a; font-weight: bold; font-size: 11px; padding: 2px 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.25);">
                      <b>Punto_1</b>
                  </div>`,
@@ -666,67 +949,67 @@
             );
         
     
-                marker_244f4d46aa1ad480da20f4b6831384ef.setIcon(icon_2c45420fa15047bb7480a2a46e5cfa1d);
+                marker_c93961492ec89a16ad110861f10dcdea.setIcon(icon_42323176704e533da52742f97e4498e2);
             
     
-            feature_group_eff01387a1609f99ff7863b8b372092e.addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            feature_group_6ce9d75d82ddca240a27ecf6f9b5f5fd.addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
         
     
-            var feature_group_ac765439ee733aaac770b6a6bbf55b52 = L.featureGroup(
+            var feature_group_3aab4433430b34fe53e314afe72274fa = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_ac765439ee733aaac770b6a6bbf55b52.addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            feature_group_3aab4433430b34fe53e314afe72274fa.addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
         
     
-            var feature_group_2208041daa910b16843bb7985f791df1 = L.featureGroup(
+            var feature_group_14b3e192f6430ebd825ed953d477794e = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_2208041daa910b16843bb7985f791df1.addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            feature_group_14b3e192f6430ebd825ed953d477794e.addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
         
     
-            var feature_group_0295abe0e9b24aef8699eab20e445086 = L.featureGroup(
+            var feature_group_be7b8e6f677ab9845c5bf5a637e23045 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_0295abe0e9b24aef8699eab20e445086.addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            feature_group_be7b8e6f677ab9845c5bf5a637e23045.addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
         
     
-            var feature_group_5c4d0172dcc7f1c58a42d26cf036a142 = L.featureGroup(
+            var feature_group_fa3fd1989a9b9e7c22f1ad8d3c84bef9 = L.featureGroup(
                 {
 }
             );
         
     
-            var feature_group_882c55c9d7cf3e9bc1e9e1b1e5c331ae = L.featureGroup(
+            var feature_group_77d0c321494b03b8a650d48dbf4b6870 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_882c55c9d7cf3e9bc1e9e1b1e5c331ae.addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            feature_group_77d0c321494b03b8a650d48dbf4b6870.addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
         
     
-            var feature_group_9c9cae53ffcdabd6324796a763c40457 = L.featureGroup(
+            var feature_group_718ef72ff0d2e54412b7c9613a41f53f = L.featureGroup(
                 {
 }
             );
         
     
-            var poly_line_45277781999e316597357b0d89bc1707 = L.polyline(
+            var poly_line_38963027450c0fe27eb331e3c0c05747 = L.polyline(
                 [[10.46875177770481, -66.90786690485099], [10.495866496216209, -66.90768481550465]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            poly_line_45277781999e316597357b0d89bc1707.bindTooltip(
+            poly_line_38963027450c0fe27eb331e3c0c05747.bindTooltip(
                 `<div>
                      UTM Este: 729,000 m (Huso 19)
                  </div>`,
@@ -736,45 +1019,45 @@
             );
         
     
-            var marker_75308c69aebbe6271acecdb76b035e0f = L.marker(
+            var marker_763e8150ae56f354be4a262a8be67f9f = L.marker(
                 [10.495866496216209, -66.90768481550465],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_095e61b7714de01804f5fb0bedcaefa9 = L.divIcon({
+            var div_icon_77d8ef131abe19bbb338270f39a0abf8 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-top\"\u003eE: 729,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_75308c69aebbe6271acecdb76b035e0f.setIcon(div_icon_095e61b7714de01804f5fb0bedcaefa9);
+                marker_763e8150ae56f354be4a262a8be67f9f.setIcon(div_icon_77d8ef131abe19bbb338270f39a0abf8);
             
     
-            var marker_5aa5262b6e35d7c36eed4322328d6013 = L.marker(
+            var marker_4a69cfe4758e825b1b597d91133f897a = L.marker(
                 [10.46875177770481, -66.90786690485099],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_6b65b9c5917992617af39cb3d0c880f8 = L.divIcon({
+            var div_icon_a254626453edd8ff0ae63b68695aa05b = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-bottom\"\u003eE: 729,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_5aa5262b6e35d7c36eed4322328d6013.setIcon(div_icon_6b65b9c5917992617af39cb3d0c880f8);
+                marker_4a69cfe4758e825b1b597d91133f897a.setIcon(div_icon_a254626453edd8ff0ae63b68695aa05b);
             
     
-            var poly_line_cbabfbf66de450d8b69b66f168cb3a45 = L.polyline(
+            var poly_line_7d8787797dcb48c36acfcbe23746d2bd = L.polyline(
                 [[10.468691653975496, -66.89873520019785], [10.495806213364867, -66.89855231749404]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            poly_line_cbabfbf66de450d8b69b66f168cb3a45.bindTooltip(
+            poly_line_7d8787797dcb48c36acfcbe23746d2bd.bindTooltip(
                 `<div>
                      UTM Este: 730,000 m (Huso 19)
                  </div>`,
@@ -784,45 +1067,45 @@
             );
         
     
-            var marker_70f4c060fb9ce19fce21899bbd3932ee = L.marker(
+            var marker_63daa6cac349c79eb3de0f2f45e90f9c = L.marker(
                 [10.495806213364867, -66.89855231749404],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_50d4134962d792a9e0002fe658798a98 = L.divIcon({
+            var div_icon_09e19a343e313465e77f19ade993dbdd = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-top\"\u003eE: 730,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_70f4c060fb9ce19fce21899bbd3932ee.setIcon(div_icon_50d4134962d792a9e0002fe658798a98);
+                marker_63daa6cac349c79eb3de0f2f45e90f9c.setIcon(div_icon_09e19a343e313465e77f19ade993dbdd);
             
     
-            var marker_06d4511e955550436cd2b3b495f07e58 = L.marker(
+            var marker_e211af47d4b7a2d13f2679164cd7c6bc = L.marker(
                 [10.468691653975496, -66.89873520019785],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_34c09975b49c7f5432e6ce1d883f2d76 = L.divIcon({
+            var div_icon_5e2056324512a140d74f6e967b5da1cd = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-bottom\"\u003eE: 730,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_06d4511e955550436cd2b3b495f07e58.setIcon(div_icon_34c09975b49c7f5432e6ce1d883f2d76);
+                marker_e211af47d4b7a2d13f2679164cd7c6bc.setIcon(div_icon_5e2056324512a140d74f6e967b5da1cd);
             
     
-            var poly_line_d8eb90da8ef3d35556a3e4a034123dd0 = L.polyline(
+            var poly_line_f7d7c4357f827e979d70333783653405 = L.polyline(
                 [[10.468631268850352, -66.88960355104338], [10.495745668425954, -66.88941987500552]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            poly_line_d8eb90da8ef3d35556a3e4a034123dd0.bindTooltip(
+            poly_line_f7d7c4357f827e979d70333783653405.bindTooltip(
                 `<div>
                      UTM Este: 731,000 m (Huso 19)
                  </div>`,
@@ -832,45 +1115,45 @@
             );
         
     
-            var marker_5288cb4c590160662868b6f608f7d4a8 = L.marker(
+            var marker_d7a564d07a1124e3f323673898224e8e = L.marker(
                 [10.495745668425954, -66.88941987500552],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_5565c3da8d6e8224a83e86d154bd7eaa = L.divIcon({
+            var div_icon_6a50fa8eaa783222608e28e7a0ffe3f9 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-top\"\u003eE: 731,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_5288cb4c590160662868b6f608f7d4a8.setIcon(div_icon_5565c3da8d6e8224a83e86d154bd7eaa);
+                marker_d7a564d07a1124e3f323673898224e8e.setIcon(div_icon_6a50fa8eaa783222608e28e7a0ffe3f9);
             
     
-            var marker_8da061a1cc72feb3d701891d5b81e68b = L.marker(
+            var marker_1d0ecd21a93b74970fd239a65eb08300 = L.marker(
                 [10.468631268850352, -66.88960355104338],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_b0eac15e28447b087ebdca04e8df8577 = L.divIcon({
+            var div_icon_f536911dfd48b55cceddbce1c97219e3 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-bottom\"\u003eE: 731,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_8da061a1cc72feb3d701891d5b81e68b.setIcon(div_icon_b0eac15e28447b087ebdca04e8df8577);
+                marker_1d0ecd21a93b74970fd239a65eb08300.setIcon(div_icon_f536911dfd48b55cceddbce1c97219e3);
             
     
-            var poly_line_42a47ac257c09b7e8cf38d9d95eb8e6e = L.polyline(
+            var poly_line_4ef88ca1fe48b2a7050330ff789adf9d = L.polyline(
                 [[10.468570622336955, -66.88047195762832], [10.49568486140706, -66.88028748827989]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            poly_line_42a47ac257c09b7e8cf38d9d95eb8e6e.bindTooltip(
+            poly_line_4ef88ca1fe48b2a7050330ff789adf9d.bindTooltip(
                 `<div>
                      UTM Este: 732,000 m (Huso 19)
                  </div>`,
@@ -880,45 +1163,45 @@
             );
         
     
-            var marker_55bb026d26d737f6620caee45bc736c8 = L.marker(
+            var marker_e869511cb4f171795a0f29e9dd20661d = L.marker(
                 [10.49568486140706, -66.88028748827989],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_3e3be723db411170041e088f5896c4f0 = L.divIcon({
+            var div_icon_bee9bae2a5aec1ac3cfbead9a967e991 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-top\"\u003eE: 732,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_55bb026d26d737f6620caee45bc736c8.setIcon(div_icon_3e3be723db411170041e088f5896c4f0);
+                marker_e869511cb4f171795a0f29e9dd20661d.setIcon(div_icon_bee9bae2a5aec1ac3cfbead9a967e991);
             
     
-            var marker_092bdbe9ff64bd1a64ac08fc43a8826d = L.marker(
+            var marker_e354f4484ecdcd9615c1de362374d731 = L.marker(
                 [10.468570622336955, -66.88047195762832],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_2a27bb51881e2e270af3f8d2edbb3558 = L.divIcon({
+            var div_icon_94ff601f9f2f81ceaa85b4faaa59933a = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-bottom\"\u003eE: 732,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_092bdbe9ff64bd1a64ac08fc43a8826d.setIcon(div_icon_2a27bb51881e2e270af3f8d2edbb3558);
+                marker_e354f4484ecdcd9615c1de362374d731.setIcon(div_icon_94ff601f9f2f81ceaa85b4faaa59933a);
             
     
-            var poly_line_0fe3fb4b71fcd2c0d367590aa93ecfaa = L.polyline(
+            var poly_line_a30a862a2edb61e3fb1a7511fba41375 = L.polyline(
                 [[10.468509714442904, -66.87134042019333], [10.495623792315808, -66.87115515755798]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            poly_line_0fe3fb4b71fcd2c0d367590aa93ecfaa.bindTooltip(
+            poly_line_a30a862a2edb61e3fb1a7511fba41375.bindTooltip(
                 `<div>
                      UTM Este: 733,000 m (Huso 19)
                  </div>`,
@@ -928,45 +1211,45 @@
             );
         
     
-            var marker_2d94c3a116018821b80bc853a1204b36 = L.marker(
+            var marker_7d72b25fe9a8d4d41f55708fee2109aa = L.marker(
                 [10.495623792315808, -66.87115515755798],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_b661b892384a91d6befb30bd76dd22af = L.divIcon({
+            var div_icon_c0cf338c774b7354154f9c7a5f59dde0 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-top\"\u003eE: 733,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_2d94c3a116018821b80bc853a1204b36.setIcon(div_icon_b661b892384a91d6befb30bd76dd22af);
+                marker_7d72b25fe9a8d4d41f55708fee2109aa.setIcon(div_icon_c0cf338c774b7354154f9c7a5f59dde0);
             
     
-            var marker_c45c1e203f7022882753622129bba379 = L.marker(
+            var marker_76f28f94d3e92242b8ef632e9a31e3c5 = L.marker(
                 [10.468509714442904, -66.87134042019333],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_dc655331f77f4ba80d55f993775a22ce = L.divIcon({
+            var div_icon_767cc894e5145de2453353955fb05d5d = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-bottom\"\u003eE: 733,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_c45c1e203f7022882753622129bba379.setIcon(div_icon_dc655331f77f4ba80d55f993775a22ce);
+                marker_76f28f94d3e92242b8ef632e9a31e3c5.setIcon(div_icon_767cc894e5145de2453353955fb05d5d);
             
     
-            var poly_line_6c60273f288204cc0551723f10ec75d3 = L.polyline(
+            var poly_line_dbfb3815118786a0955a363afea290a3 = L.polyline(
                 [[10.46875177770481, -66.90786690485099], [10.468509714442904, -66.87134042019333]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            poly_line_6c60273f288204cc0551723f10ec75d3.bindTooltip(
+            poly_line_dbfb3815118786a0955a363afea290a3.bindTooltip(
                 `<div>
                      UTM Norte: 1,158,000 m (Huso 19)
                  </div>`,
@@ -976,45 +1259,45 @@
             );
         
     
-            var marker_fe06c750a557fe2f4211b54fa16b416d = L.marker(
+            var marker_42c3255f13c5d6d6bcfef6042e570a41 = L.marker(
                 [10.46875177770481, -66.90786690485099],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_ab3a1aa56759bdda464b0d023355b681 = L.divIcon({
+            var div_icon_1def857618855b7250a43663f7a25fd9 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-left\"\u003eN: 1,158,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_fe06c750a557fe2f4211b54fa16b416d.setIcon(div_icon_ab3a1aa56759bdda464b0d023355b681);
+                marker_42c3255f13c5d6d6bcfef6042e570a41.setIcon(div_icon_1def857618855b7250a43663f7a25fd9);
             
     
-            var marker_003be62f1e45a1f8c924af2560d7a184 = L.marker(
+            var marker_97d0f9f94b8f3d6bdb8789bea4eb7c6b = L.marker(
                 [10.468509714442904, -66.87134042019333],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_d1d32c5850044759f9154fd2c1b43fef = L.divIcon({
+            var div_icon_a566d0ea83e3219cd67840b573a2e89f = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-right\"\u003eN: 1,158,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_003be62f1e45a1f8c924af2560d7a184.setIcon(div_icon_d1d32c5850044759f9154fd2c1b43fef);
+                marker_97d0f9f94b8f3d6bdb8789bea4eb7c6b.setIcon(div_icon_a566d0ea83e3219cd67840b573a2e89f);
             
     
-            var poly_line_b8d1149a0f0c62d9ea0d08a575bef2f2 = L.polyline(
+            var poly_line_efc4c5f91403fae91a78c76d3853345a = L.polyline(
                 [[10.47779002267898, -66.90780626367054], [10.477547745882775, -66.87127872221286]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            poly_line_b8d1149a0f0c62d9ea0d08a575bef2f2.bindTooltip(
+            poly_line_efc4c5f91403fae91a78c76d3853345a.bindTooltip(
                 `<div>
                      UTM Norte: 1,159,000 m (Huso 19)
                  </div>`,
@@ -1024,45 +1307,45 @@
             );
         
     
-            var marker_712c955e28e26c5dd7ea4afaaceb184e = L.marker(
+            var marker_5d320a17d87136a3ff085c51b02dbaac = L.marker(
                 [10.47779002267898, -66.90780626367054],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_a70c15ab7b93f3f5af22718bafe50fde = L.divIcon({
+            var div_icon_031031b160310e48d0942837fb76acd1 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-left\"\u003eN: 1,159,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_712c955e28e26c5dd7ea4afaaceb184e.setIcon(div_icon_a70c15ab7b93f3f5af22718bafe50fde);
+                marker_5d320a17d87136a3ff085c51b02dbaac.setIcon(div_icon_031031b160310e48d0942837fb76acd1);
             
     
-            var marker_26842de2928c591be676be8d54ee0317 = L.marker(
+            var marker_374f71d6ff448b4247f3f2ec6769fadc = L.marker(
                 [10.477547745882775, -66.87127872221286],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_0e2c8a1a953ee9bf3411ed1716eea743 = L.divIcon({
+            var div_icon_2487a2fe71a6a1f657b4236e7c27e27f = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-right\"\u003eN: 1,159,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_26842de2928c591be676be8d54ee0317.setIcon(div_icon_0e2c8a1a953ee9bf3411ed1716eea743);
+                marker_374f71d6ff448b4247f3f2ec6769fadc.setIcon(div_icon_2487a2fe71a6a1f657b4236e7c27e27f);
             
     
-            var poly_line_5a199773abb0a76c4e951e39d2dc29e1 = L.polyline(
+            var poly_line_22460db777a8c169133a88b6c2a52e58 = L.polyline(
                 [[10.486828262184293, -66.90774556722434], [10.48658577184193, -66.87121696800371]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            poly_line_5a199773abb0a76c4e951e39d2dc29e1.bindTooltip(
+            poly_line_22460db777a8c169133a88b6c2a52e58.bindTooltip(
                 `<div>
                      UTM Norte: 1,160,000 m (Huso 19)
                  </div>`,
@@ -1072,45 +1355,45 @@
             );
         
     
-            var marker_855c757637bfc6de4a39991f911c5382 = L.marker(
+            var marker_eb8c6e385d47eb3941e777ce86b9d689 = L.marker(
                 [10.486828262184293, -66.90774556722434],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_c1685ae07cb0fc8cea301d663b106c2e = L.divIcon({
+            var div_icon_76e2f462a80424c6b4d92cecfccaf756 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-left\"\u003eN: 1,160,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_855c757637bfc6de4a39991f911c5382.setIcon(div_icon_c1685ae07cb0fc8cea301d663b106c2e);
+                marker_eb8c6e385d47eb3941e777ce86b9d689.setIcon(div_icon_76e2f462a80424c6b4d92cecfccaf756);
             
     
-            var marker_f9ea573cddd3ce7f8b0682a89868138d = L.marker(
+            var marker_7adbf251c86f8922e7282fbca939da4a = L.marker(
                 [10.48658577184193, -66.87121696800371],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_7f32c3b0bcab3572c832a0832465e6cd = L.divIcon({
+            var div_icon_5cdc6dbdb9716d195cb87fc326760a6a = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-right\"\u003eN: 1,160,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_f9ea573cddd3ce7f8b0682a89868138d.setIcon(div_icon_7f32c3b0bcab3572c832a0832465e6cd);
+                marker_7adbf251c86f8922e7282fbca939da4a.setIcon(div_icon_5cdc6dbdb9716d195cb87fc326760a6a);
             
     
-            var poly_line_263856261f6a118ee96f52730fb7fa3a = L.polyline(
+            var poly_line_4373d13309c31c1ed10289d939a7bfaf = L.polyline(
                 [[10.495866496216209, -66.90768481550465], [10.495623792315808, -66.87115515755798]],
                 {"bubblingMouseEvents": true, "color": "#059669", "dashArray": "4, 4", "dashOffset": null, "fill": false, "fillColor": "#059669", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            poly_line_263856261f6a118ee96f52730fb7fa3a.bindTooltip(
+            poly_line_4373d13309c31c1ed10289d939a7bfaf.bindTooltip(
                 `<div>
                      UTM Norte: 1,161,000 m (Huso 19)
                  </div>`,
@@ -1120,74 +1403,74 @@
             );
         
     
-            var marker_35498dcdb99ec93b9301779d1884bdbf = L.marker(
+            var marker_c21eb0c9ed83caeaf4d365b32824c1b7 = L.marker(
                 [10.495866496216209, -66.90768481550465],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_1326aa1c9c0d27b5772822d632d9928d = L.divIcon({
+            var div_icon_fa47130dd9b2f57c0609fee745f760e5 = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-left\"\u003eN: 1,161,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_35498dcdb99ec93b9301779d1884bdbf.setIcon(div_icon_1326aa1c9c0d27b5772822d632d9928d);
+                marker_c21eb0c9ed83caeaf4d365b32824c1b7.setIcon(div_icon_fa47130dd9b2f57c0609fee745f760e5);
             
     
-            var marker_9c12679e153035c9286cc2393b5a79d9 = L.marker(
+            var marker_68adffa35c74f6b679a63a002f6555d6 = L.marker(
                 [10.495623792315808, -66.87115515755798],
                 {
 }
-            ).addTo(feature_group_9c9cae53ffcdabd6324796a763c40457);
+            ).addTo(feature_group_718ef72ff0d2e54412b7c9613a41f53f);
         
     
-            var div_icon_44d0f3270f5dde7d1b9e78ee4e340689 = L.divIcon({
+            var div_icon_e86e62f49e99cc83fde3cfb0afbe7e4d = L.divIcon({
   "html": "\u003cdiv class=\"grid-edge-label grid-edge-right\"\u003eN: 1,161,000 m\u003c/div\u003e",
-  "className": "empty",
+  "className": "grid-edge-marker",
 });
         
     
-                marker_9c12679e153035c9286cc2393b5a79d9.setIcon(div_icon_44d0f3270f5dde7d1b9e78ee4e340689);
+                marker_68adffa35c74f6b679a63a002f6555d6.setIcon(div_icon_e86e62f49e99cc83fde3cfb0afbe7e4d);
             
     
-            feature_group_9c9cae53ffcdabd6324796a763c40457.addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            feature_group_718ef72ff0d2e54412b7c9613a41f53f.addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
         
     
-            var layer_control_886bc53df0a5aecc58250e324bac537d_layers = {
+            var layer_control_09c6cbdf8f0de0afc0b2d0c7ddbb502c_layers = {
                 base_layers : {
-                    "OpenStreetMap (Est\u00e1ndar)" : tile_layer_e33d5fd148cf1a0ef42b1572648bf052,
-                    "CartoDB Positron (Modo Claro)" : tile_layer_8e6166ca0681776f86e5578a9a3f14a2,
-                    "CartoDB Dark Matter (Modo Oscuro)" : tile_layer_804268aa87814d5aa8bae8d32e4d0af8,
-                    "Esri Satellite HD" : tile_layer_29455851e7774785e2e54d6489491873,
-                    "Esri Topogr\u00e1fico" : tile_layer_10c5b1669d1a73212597d7b0e09957e3,
-                    "Google Satellite" : tile_layer_117eedcdc7019b8a08597a230c861259,
-                    "Google Maps (Calles)" : tile_layer_fe5fdc6eb2b02f5d31a802cca771f59c,
+                    "OpenStreetMap (Est\u00e1ndar)" : tile_layer_2a22d65b58be95f802360a374ea16929,
+                    "CartoDB Positron (Modo Claro)" : tile_layer_994d105f0b705e00ab49eb22fa92eb66,
+                    "CartoDB Dark Matter (Modo Oscuro)" : tile_layer_36976a4f7786547176e09798427aefb8,
+                    "Esri Satellite HD" : tile_layer_330f52e97349bde2aaf844eb2fc7769a,
+                    "Esri Topogr\u00e1fico" : tile_layer_b8ac85b852c5f783dc7547989b0884f2,
+                    "Google Satellite" : tile_layer_ca07942544f3ca15d76a840cc0318244,
+                    "Google Maps (Calles)" : tile_layer_2c04477c8ac48dc32a3ab32338d12786,
                 },
                 overlays :  {
-                    "\ud83d\udccd Puntos de Localizaci\u00f3n" : feature_group_eff01387a1609f99ff7863b8b372092e,
-                    "\ud83d\udccf Polil\u00edneas" : feature_group_ac765439ee733aaac770b6a6bbf55b52,
-                    "\u2b55 C\u00edrculos" : feature_group_2208041daa910b16843bb7985f791df1,
-                    "\ud83d\udea9 Per\u00edmetro RF (Curva Suave)" : feature_group_0295abe0e9b24aef8699eab20e445086,
-                    "\ud83d\udccc V\u00e9rtices Per\u00edmetro RF (Marcadores)" : feature_group_5c4d0172dcc7f1c58a42d26cf036a142,
-                    "\ud83d\udd25 Patr\u00f3n de Radiaci\u00f3n (Heatmap RF)" : feature_group_882c55c9d7cf3e9bc1e9e1b1e5c331ae,
-                    "\ud83c\udf10 Grilla UTM (m)" : feature_group_9c9cae53ffcdabd6324796a763c40457,
+                    "\ud83d\udccd Puntos de Localizaci\u00f3n" : feature_group_6ce9d75d82ddca240a27ecf6f9b5f5fd,
+                    "\ud83d\udccf Polil\u00edneas" : feature_group_3aab4433430b34fe53e314afe72274fa,
+                    "\u2b55 C\u00edrculos" : feature_group_14b3e192f6430ebd825ed953d477794e,
+                    "\ud83d\udea9 Per\u00edmetro RF (Curva Suave)" : feature_group_be7b8e6f677ab9845c5bf5a637e23045,
+                    "\ud83d\udccc V\u00e9rtices Per\u00edmetro RF (Marcadores)" : feature_group_fa3fd1989a9b9e7c22f1ad8d3c84bef9,
+                    "\ud83d\udd25 Patr\u00f3n de Radiaci\u00f3n (Heatmap RF)" : feature_group_77d0c321494b03b8a650d48dbf4b6870,
+                    "\ud83c\udf10 Grilla UTM (m)" : feature_group_718ef72ff0d2e54412b7c9613a41f53f,
                 },
             };
-            let layer_control_886bc53df0a5aecc58250e324bac537d = L.control.layers(
-                layer_control_886bc53df0a5aecc58250e324bac537d_layers.base_layers,
-                layer_control_886bc53df0a5aecc58250e324bac537d_layers.overlays,
+            let layer_control_09c6cbdf8f0de0afc0b2d0c7ddbb502c = L.control.layers(
+                layer_control_09c6cbdf8f0de0afc0b2d0c7ddbb502c_layers.base_layers,
+                layer_control_09c6cbdf8f0de0afc0b2d0c7ddbb502c_layers.overlays,
                 {
   "position": "topright",
   "collapsed": false,
   "autoZIndex": true,
 }
-            ).addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            ).addTo(map_02b7b53cbfe09fbcaaecc12b18c9aecd);
 
         
     
-            var mouse_position_c21b5b4fba4431ad8a662f4f840a396d = new L.Control.MousePosition(
+            var mouse_position_d63a888a209e90749e1ad5d3e87d6f14 = new L.Control.MousePosition(
                 {
   "position": "topright",
   "separator": " | ",
@@ -1197,14 +1480,14 @@
   "prefix": "Coordenadas:",
 }
             );
-            mouse_position_c21b5b4fba4431ad8a662f4f840a396d.options["latFormatter"] =
+            mouse_position_d63a888a209e90749e1ad5d3e87d6f14.options["latFormatter"] =
                 function(num) {return L.Util.formatNum(num, 6) + ' º ';};;
-            mouse_position_c21b5b4fba4431ad8a662f4f840a396d.options["lngFormatter"] =
+            mouse_position_d63a888a209e90749e1ad5d3e87d6f14.options["lngFormatter"] =
                 function(num) {return L.Util.formatNum(num, 6) + ' º ';};;
-            map_14fe5b8cd1b45d9b801ac932539b26f4.addControl(mouse_position_c21b5b4fba4431ad8a662f4f840a396d);
+            map_02b7b53cbfe09fbcaaecc12b18c9aecd.addControl(mouse_position_d63a888a209e90749e1ad5d3e87d6f14);
         
     
-            var measure_control_fedeba912d61cfd0fdaab46978652843 = new L.Control.Measure(
+            var measure_control_15e632e09f49130722e81a2fd16d28b0 = new L.Control.Measure(
                 {
   "position": "bottomleft",
   "primaryLengthUnit": "meters",
@@ -1212,7 +1495,7 @@
   "primaryAreaUnit": "sqmeters",
   "secondaryAreaUnit": "acres",
 });
-            map_14fe5b8cd1b45d9b801ac932539b26f4.addControl(measure_control_fedeba912d61cfd0fdaab46978652843);
+            map_02b7b53cbfe09fbcaaecc12b18c9aecd.addControl(measure_control_15e632e09f49130722e81a2fd16d28b0);
 
             // Workaround for using this plugin with Leaflet>=1.8.0
             // https://github.com/ljagis/leaflet-measure/issues/171
@@ -1231,12 +1514,12 @@
 
         
     
-            var tile_layer_1a10b41c6856558df14d452a2f7d77c5 = L.tileLayer(
+            var tile_layer_930491c4688d1c9ed2231b04288fbbe4 = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {"attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors", "detect_retina": false, "max_native_zoom": 19, "max_zoom": 19, "min_zoom": 0, "no_wrap": false, "opacity": 1, "subdomains": "abc", "tms": false}
             );
-            var mini_map_24c38bc2d950a35cba2c37cd01da318e = new L.Control.MiniMap(
-                tile_layer_1a10b41c6856558df14d452a2f7d77c5,
+            var mini_map_f7a5957463e8664f350dc4098fd3ad6b = new L.Control.MiniMap(
+                tile_layer_930491c4688d1c9ed2231b04288fbbe4,
                 {
   "position": "bottomleft",
   "width": 150,
@@ -1251,17 +1534,7 @@
   "minimized": false,
 }
             );
-            map_14fe5b8cd1b45d9b801ac932539b26f4.addControl(mini_map_24c38bc2d950a35cba2c37cd01da318e);
-        
-    
-            L.control.fullscreen(
-                {
-  "position": "topleft",
-  "title": "Pantalla Completa",
-  "titleCancel": "Salir Pantalla Completa",
-  "forceSeparateButton": false,
-}
-            ).addTo(map_14fe5b8cd1b45d9b801ac932539b26f4);
+            map_02b7b53cbfe09fbcaaecc12b18c9aecd.addControl(mini_map_f7a5957463e8664f350dc4098fd3ad6b);
         
     
             var options = {
@@ -1270,16 +1543,16 @@
               edit: {},
             }
                 // FeatureGroup is to store editable layers.
-                var drawnItems_draw_control_9b376c8bdd511f8dfd0cc04e5f2e0fd6 =
+                var drawnItems_draw_control_730629a3e9ef7c160b4bbf9c1f3ea2cf =
                     new L.featureGroup().addTo(
-                        map_14fe5b8cd1b45d9b801ac932539b26f4
+                        map_02b7b53cbfe09fbcaaecc12b18c9aecd
                     );
 
-            options.edit.featureGroup = drawnItems_draw_control_9b376c8bdd511f8dfd0cc04e5f2e0fd6;
-            var draw_control_9b376c8bdd511f8dfd0cc04e5f2e0fd6 = new L.Control.Draw(
+            options.edit.featureGroup = drawnItems_draw_control_730629a3e9ef7c160b4bbf9c1f3ea2cf;
+            var draw_control_730629a3e9ef7c160b4bbf9c1f3ea2cf = new L.Control.Draw(
                 options
-            ).addTo( map_14fe5b8cd1b45d9b801ac932539b26f4 );
-            map_14fe5b8cd1b45d9b801ac932539b26f4.on(L.Draw.Event.CREATED, function(e) {
+            ).addTo( map_02b7b53cbfe09fbcaaecc12b18c9aecd );
+            map_02b7b53cbfe09fbcaaecc12b18c9aecd.on(L.Draw.Event.CREATED, function(e) {
                 var layer = e.layer,
                     type = e.layerType;
                 var coords = JSON.stringify(layer.toGeoJSON());
@@ -1287,15 +1560,15 @@
                     alert(coords);
                     console.log(coords);
                 });
-                drawnItems_draw_control_9b376c8bdd511f8dfd0cc04e5f2e0fd6.addLayer(layer);
+                drawnItems_draw_control_730629a3e9ef7c160b4bbf9c1f3ea2cf.addLayer(layer);
             });
-            map_14fe5b8cd1b45d9b801ac932539b26f4.on('draw:created', function(e) {
-                drawnItems_draw_control_9b376c8bdd511f8dfd0cc04e5f2e0fd6.addLayer(e.layer);
+            map_02b7b53cbfe09fbcaaecc12b18c9aecd.on('draw:created', function(e) {
+                drawnItems_draw_control_730629a3e9ef7c160b4bbf9c1f3ea2cf.addLayer(e.layer);
             });
 
             
             document.getElementById('export').onclick = function(e) {
-                var data = drawnItems_draw_control_9b376c8bdd511f8dfd0cc04e5f2e0fd6.toGeoJSON();
+                var data = drawnItems_draw_control_730629a3e9ef7c160b4bbf9c1f3ea2cf.toGeoJSON();
                 var convertedData = 'text/json;charset=utf-8,'
                     + encodeURIComponent(JSON.stringify(data));
                 document.getElementById('export').setAttribute(
