@@ -90,7 +90,7 @@ def agregar_grilla(group, grid_step=1.0, bounds=None, coord_system='wgs84'):
                 color="#059669",
                 opacity=0.6,
                 dash_array="4, 4",
-                tooltip=f"UTM Este: {e_val:,.0f} m (Huso {huso})"
+                tooltip=f"UTM Este: {e_val:.0f} m (Huso {huso})"
             ).add_to(group)
 
             # Etiqueta en Borde Superior
@@ -99,7 +99,7 @@ def agregar_grilla(group, grid_step=1.0, bounds=None, coord_system='wgs84'):
                 icon=folium.DivIcon(
                     class_name="grid-edge-marker",
                     icon_size=None,
-                    html=f'<div class="grid-edge-label grid-edge-top">E: {e_val:,.0f} m</div>'
+                    html=f'<div class="grid-edge-label grid-edge-top">E: {e_val:.0f} m</div>'
                 )
             ).add_to(group)
 
@@ -109,7 +109,7 @@ def agregar_grilla(group, grid_step=1.0, bounds=None, coord_system='wgs84'):
                 icon=folium.DivIcon(
                     class_name="grid-edge-marker",
                     icon_size=None,
-                    html=f'<div class="grid-edge-label grid-edge-bottom">E: {e_val:,.0f} m</div>'
+                    html=f'<div class="grid-edge-label grid-edge-bottom">E: {e_val:.0f} m</div>'
                 )
             ).add_to(group)
 
@@ -124,7 +124,7 @@ def agregar_grilla(group, grid_step=1.0, bounds=None, coord_system='wgs84'):
                 color="#059669",
                 opacity=0.6,
                 dash_array="4, 4",
-                tooltip=f"UTM Norte: {n_val:,.0f} m (Huso {huso})"
+                tooltip=f"UTM Norte: {n_val:.0f} m (Huso {huso})"
             ).add_to(group)
 
             # Etiqueta en Borde Izquierdo
@@ -133,7 +133,7 @@ def agregar_grilla(group, grid_step=1.0, bounds=None, coord_system='wgs84'):
                 icon=folium.DivIcon(
                     class_name="grid-edge-marker",
                     icon_size=None,
-                    html=f'<div class="grid-edge-label grid-edge-left">N: {n_val:,.0f} m</div>'
+                    html=f'<div class="grid-edge-label grid-edge-left">N: {n_val:.0f} m</div>'
                 )
             ).add_to(group)
 
@@ -143,7 +143,7 @@ def agregar_grilla(group, grid_step=1.0, bounds=None, coord_system='wgs84'):
                 icon=folium.DivIcon(
                     class_name="grid-edge-marker",
                     icon_size=None,
-                    html=f'<div class="grid-edge-label grid-edge-right">N: {n_val:,.0f} m</div>'
+                    html=f'<div class="grid-edge-label grid-edge-right">N: {n_val:.0f} m</div>'
                 )
             ).add_to(group)
 
@@ -170,11 +170,11 @@ def agregar_grilla(group, grid_step=1.0, bounds=None, coord_system='wgs84'):
                 color="#2563eb",
                 opacity=0.6,
                 dash_array="4, 4",
-                tooltip=f"Latitud: {lat_val:.4f}º"
+                tooltip=f"Latitud: {lat_val:.2f}º"
             ).add_to(group)
 
             hemi_n = 'N' if lat_val >= 0 else 'S'
-            lbl_lat = f"{abs(lat_val):.4f}º {hemi_n}"
+            lbl_lat = f"{abs(lat_val):.2f}º {hemi_n}"
 
             # Etiqueta Borde Izquierdo
             folium.Marker(
@@ -205,11 +205,11 @@ def agregar_grilla(group, grid_step=1.0, bounds=None, coord_system='wgs84'):
                 color="#2563eb",
                 opacity=0.6,
                 dash_array="4, 4",
-                tooltip=f"Longitud: {lon_val:.4f}º"
+                tooltip=f"Longitud: {lon_val:.2f}º"
             ).add_to(group)
 
             hemi_e = 'E' if lon_val >= 0 else 'W'
-            lbl_lon = f"{abs(lon_val):.4f}º {hemi_e}"
+            lbl_lon = f"{abs(lon_val):.2f}º {hemi_e}"
 
             # Etiqueta Borde Superior
             folium.Marker(
@@ -644,7 +644,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
                     color: "#059669", weight: 1.5, opacity: 0.6, dashArray: "4, 4"
                 }}).addTo(dynamicGridLayerGroup);
 
-                var eLbl = "E: " + Math.round(eVal).toLocaleString() + " m";
+                var eLbl = "E: " + Math.round(eVal) + " m";
 
                 // Borde Superior (Interno)
                 L.marker([topLat, ptTop.lon], {{
@@ -674,7 +674,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
                     color: "#059669", weight: 1.5, opacity: 0.6, dashArray: "4, 4"
                 }}).addTo(dynamicGridLayerGroup);
 
-                var nLbl = "N: " + Math.round(nVal).toLocaleString() + " m";
+                var nLbl = "N: " + Math.round(nVal) + " m";
 
                 // Borde Izquierdo (Interno)
                 L.marker([ptLft.lat, lftLon], {{
@@ -722,7 +722,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
                 }}).addTo(dynamicGridLayerGroup);
 
                 var hemiN = latVal >= 0 ? "N" : "S";
-                var lblLat = Math.abs(latVal).toFixed(4) + "º " + hemiN;
+                var lblLat = Math.abs(latVal).toFixed(2) + "º " + hemiN;
 
                 // Borde Izquierdo (Interno)
                 L.marker([latVal, lftLon], {{
@@ -751,7 +751,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
                 }}).addTo(dynamicGridLayerGroup);
 
                 var hemiE = lonVal >= 0 ? "E" : "W";
-                var lblLon = Math.abs(lonVal).toFixed(4) + "º " + hemiE;
+                var lblLon = Math.abs(lonVal).toFixed(2) + "º " + hemiE;
 
                 // Borde Superior (Interno)
                 L.marker([topLat, lonVal], {{
