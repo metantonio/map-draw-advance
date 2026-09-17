@@ -845,24 +845,75 @@ async function generateMap(silent = false, cajetin_info = null) {
   }
 }
 
-// Exportar Mapa como Imagen (PNG) usando html2canvas
+// Exportar Mapa como Imagen (PNG) usando html2canvas (Excluyendo modales y controles superpuestos)
 async function exportMapPNG() {
   const container = document.getElementById('mapExportContainer');
   const iframe = document.getElementById('mapFrame');
   if (!container || !iframe) return;
 
-  showLoading(true);
+  const btn = document.getElementById('btnExportPNG');
+  const origBtnHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Exportando...';
+  }
+
+  // Elementos a ocultar temporalmente para que no salgan sobre el mapa en el PNG
+  const hiddenElements = [];
+  const hideElement = (el) => {
+    if (el) {
+      hiddenElements.push({
+        el: el,
+        prevDisplay: el.style.display,
+        prevVisibility: el.style.visibility
+      });
+      el.style.display = 'none';
+      el.style.visibility = 'hidden';
+      el.setAttribute('data-html2canvas-ignore', 'true');
+    }
+  };
 
   try {
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-    const targetElement = iframeDoc ? iframeDoc.body : container;
+
+    // 1. Ocultar modales y elementos flotantes dentro del iframe del mapa
+    if (iframeDoc) {
+      // Modal / leyenda flotante de la escala RF y botón PDF
+      hideElement(iframeDoc.getElementById('maplegend'));
+      // Cajetín si estuviese visible
+      hideElement(iframeDoc.getElementById('cajetin-plano'));
+      // Controles interactivos de Leaflet (botones de zoom, capas, regla, minimap, herramientas de dibujo)
+      iframeDoc.querySelectorAll('.leaflet-control-container, .leaflet-popup, .leaflet-tooltip-pane .leaflet-popup').forEach(el => {
+        hideElement(el);
+      });
+    }
+
+    // 2. Ocultar modales, overlays y controles en la página principal
+    hideElement(document.getElementById('loadingOverlay'));
+    hideElement(document.getElementById('btnRestoreSidebar'));
+    document.querySelectorAll('.modal-backdrop').forEach(el => hideElement(el));
+
+    // Determinar el elemento exacto del mapa a capturar
+    let targetElement = container;
+    if (iframeDoc) {
+      targetElement = iframeDoc.querySelector('.folium-map') || iframeDoc.getElementById('map') || iframeDoc.body;
+    }
 
     const canvas = await html2canvas(targetElement, {
       useCORS: true,
       allowTaint: true,
       logging: false,
       scale: 3,
-      imageTimeout: 0
+      imageTimeout: 0,
+      ignoreElements: (element) => {
+        if (!element) return false;
+        if (element.getAttribute && element.getAttribute('data-html2canvas-ignore') === 'true') return true;
+        const id = element.id || '';
+        const className = typeof element.className === 'string' ? element.className : '';
+        if (id === 'maplegend' || id === 'cajetin-plano' || id === 'loadingOverlay' || id === 'btnRestoreSidebar') return true;
+        if (className.includes('leaflet-control') || className.includes('modal-backdrop')) return true;
+        return false;
+      }
     });
 
     const image = canvas.toDataURL("image/png");
@@ -873,10 +924,20 @@ async function exportMapPNG() {
     link.click();
     document.body.removeChild(link);
   } catch (err) {
-    console.warn("Fallo al capturar canvas PNG, invocando cuadro de diálogo de mapa:", err);
-    window.print();
+    console.warn("Fallo al capturar canvas PNG:", err);
+    alert("⚠️ No se pudo generar la exportación PNG del mapa: " + err);
   } finally {
-    showLoading(false);
+    // Restaurar visibilidad original de todos los elementos
+    hiddenElements.forEach(item => {
+      item.el.style.display = item.prevDisplay;
+      item.el.style.visibility = item.prevVisibility;
+      item.el.removeAttribute('data-html2canvas-ignore');
+    });
+
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origBtnHtml;
+    }
   }
 }
 
