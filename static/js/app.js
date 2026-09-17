@@ -323,6 +323,7 @@ function bindEvents() {
   if (editorPanel) {
     editorPanel.addEventListener('input', (e) => {
       if (e.target.tagName === 'INPUT') {
+        e.target.title = e.target.value;
         triggerAutoUpdateMap(true);
       }
     });
@@ -506,6 +507,19 @@ function bindEvents() {
   iframe.addEventListener('load', () => {
     showLoading(false);
   });
+
+  // Ajustar tamaño del mapa Leaflet al redimensionar la ventana para garantizar 100% de pantalla visible
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      try {
+        if (iframe && iframe.contentWindow && typeof iframe.contentWindow.fixLeafletMapSize === 'function') {
+          iframe.contentWindow.fixLeafletMapSize();
+        }
+      } catch (e) {}
+    }, 150);
+  });
 }
 
 // Disparador de actualización automática con debounce (500ms)
@@ -661,11 +675,11 @@ function renderTableLoc() {
   currentData.localizacion.forEach((item, index) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="number" step="any" value="${item.norte}"></td>
-      <td><input type="number" step="any" value="${item.este}"></td>
-      <td><input type="text" value="${item.color || 'blue'}"></td>
-      <td><input type="text" value="${item.sobrenombre || ''}"></td>
-      <td><button class="btn-danger-icon" onclick="removeRow('localizacion', ${index})"><i class="fa-solid fa-trash"></i></button></td>
+      <td><input type="number" step="any" value="${item.norte}" title="${item.norte}" placeholder="Lat"></td>
+      <td><input type="number" step="any" value="${item.este}" title="${item.este}" placeholder="Lon"></td>
+      <td><input type="text" value="${item.color || 'blue'}" title="${item.color || 'blue'}"></td>
+      <td><input type="text" value="${item.sobrenombre || ''}" title="${item.sobrenombre || ''}"></td>
+      <td><button class="btn-danger-icon" onclick="removeRow('localizacion', ${index})" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -678,9 +692,9 @@ function renderTableLin() {
   currentData.linea.forEach((item, index) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="number" step="any" value="${item.norte}"></td>
-      <td><input type="number" step="any" value="${item.este}"></td>
-      <td><button class="btn-danger-icon" onclick="removeRow('linea', ${index})"><i class="fa-solid fa-trash"></i></button></td>
+      <td><input type="number" step="any" value="${item.norte}" title="${item.norte}" placeholder="Lat"></td>
+      <td><input type="number" step="any" value="${item.este}" title="${item.este}" placeholder="Lon"></td>
+      <td><button class="btn-danger-icon" onclick="removeRow('linea', ${index})" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -693,10 +707,10 @@ function renderTableCir() {
   currentData.circulo.forEach((item, index) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="number" step="any" value="${item.norte}"></td>
-      <td><input type="number" step="any" value="${item.este}"></td>
-      <td><input type="number" step="any" value="${item.radio || 100}"></td>
-      <td><button class="btn-danger-icon" onclick="removeRow('circulo', ${index})"><i class="fa-solid fa-trash"></i></button></td>
+      <td><input type="number" step="any" value="${item.norte}" title="${item.norte}" placeholder="Lat"></td>
+      <td><input type="number" step="any" value="${item.este}" title="${item.este}" placeholder="Lon"></td>
+      <td><input type="number" step="any" value="${item.radio || 100}" title="${item.radio || 100} m"></td>
+      <td><button class="btn-danger-icon" onclick="removeRow('circulo', ${index})" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -744,13 +758,13 @@ function renderTableRad() {
     const colorVal = item.color || RAD_PALETTE[index % RAD_PALETTE.length];
     const etiqVal = item.etiqueta || `Patrón 1`;
     tr.innerHTML = `
-      <td><input type="number" step="any" value="${item.norte}"></td>
-      <td><input type="number" step="any" value="${item.este}"></td>
-      <td><input type="number" step="any" value="${item.angulo || 0}"></td>
-      <td><input type="number" step="any" value="${item.distancia || 1}"></td>
-      <td><input type="text" value="${etiqVal}" placeholder="Ej: Patrón 1"></td>
-      <td><input type="color" value="${colorVal.startsWith('#') ? colorVal : '#8e44ad'}" style="padding:1px; cursor:pointer; height:28px;"></td>
-      <td><button class="btn-danger-icon" onclick="removeRow('radiacion', ${index})"><i class="fa-solid fa-trash"></i></button></td>
+      <td><input type="number" step="any" value="${item.norte}" title="${item.norte}" placeholder="Lat"></td>
+      <td><input type="number" step="any" value="${item.este}" title="${item.este}" placeholder="Lon"></td>
+      <td><input type="number" step="any" value="${item.angulo || 0}" title="${item.angulo || 0}º" placeholder="0"></td>
+      <td><input type="number" step="any" value="${item.distancia || 1}" title="${item.distancia || 1} km" placeholder="1.0"></td>
+      <td><input type="text" value="${etiqVal}" title="${etiqVal}" placeholder="Ej: Patrón 1"></td>
+      <td><input type="color" value="${colorVal.startsWith('#') ? colorVal : '#8e44ad'}" title="${colorVal}" style="padding:1px; cursor:pointer; height:28px;"></td>
+      <td><button class="btn-danger-icon" onclick="removeRow('radiacion', ${index})" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>
     `;
     tbody.appendChild(tr);
   });

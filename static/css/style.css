@@ -19,19 +19,30 @@
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+html, body {
+  height: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Cero barras de scroll vertical en el body: altura máxima visible */
+}
+
 body {
   background-color: var(--bg-primary);
   color: var(--text-main);
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 /* Navbar */
 .navbar {
+  flex-shrink: 0;
   background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
-  padding: 12px 24px;
+  padding: 8px 20px;
+  min-height: 54px;
+  max-height: 54px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -127,12 +138,14 @@ body {
 .main-layout {
   display: grid;
   grid-template-columns: 480px 1fr;
-  gap: 16px;
-  padding: 16px;
+  gap: 12px;
+  padding: 12px;
   flex: 1;
-  height: calc(100vh - 65px);
-  transition: grid-template-columns 0.35s cubic-bezier(0.4, 0, 0.2, 1), gap 0.35s ease;
+  min-height: 0;
+  height: calc(100vh - 54px);
   position: relative;
+  overflow: hidden;
+  transition: grid-template-columns 0.35s cubic-bezier(0.4, 0, 0.2, 1), gap 0.35s ease;
 }
 
 .main-layout.sidebar-collapsed {
@@ -192,16 +205,19 @@ body {
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
 .panel-header {
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
   background-color: rgba(0,0,0,0.15);
+  flex-shrink: 0;
 }
 
 .panel-header h2 {
@@ -221,6 +237,7 @@ body {
   background-color: rgba(15, 23, 42, 0.6);
   border-bottom: 1px solid var(--border-color);
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .project-select-container {
@@ -274,6 +291,7 @@ body {
   display: flex;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--bg-primary);
+  flex-shrink: 0;
 }
 
 .tab-btn {
@@ -312,7 +330,8 @@ body {
   display: none;
   flex: 1;
   flex-direction: column;
-  padding: 12px;
+  padding: 10px 12px;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -324,7 +343,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
 }
 
 .info-text {
@@ -335,9 +355,28 @@ body {
 /* Data Tables */
 .table-wrapper {
   flex: 1;
+  min-height: 0;
+  overflow-x: auto;
   overflow-y: auto;
   border: 1px solid var(--border-color);
   border-radius: 6px;
+  background-color: var(--bg-primary);
+}
+
+/* Scrollbar estilizado para la tabla */
+.table-wrapper::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.table-wrapper::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 .data-table {
@@ -354,6 +393,8 @@ body {
   font-weight: 600;
   position: sticky;
   top: 0;
+  z-index: 2;
+  white-space: nowrap;
 }
 
 .data-table td {
@@ -361,30 +402,70 @@ body {
   border-bottom: 1px solid var(--border-color);
 }
 
+/* Ocultar spinners de números para ganar ancho útil */
+.data-table input[type="number"]::-webkit-inner-spin-button,
+.data-table input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.data-table input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 .data-table input {
   width: 100%;
-  background-color: var(--bg-primary);
+  background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   color: var(--text-main);
   border-radius: 4px;
-  padding: 4px 6px;
+  padding: 5px 7px;
   font-size: 12px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  letter-spacing: -0.2px;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
 }
+
+.data-table input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+  background-color: #0f172a;
+  outline: none;
+}
+
+/* Ancho y distribución específica para la tabla de Radiación */
+#table-rad {
+  min-width: 620px;
+}
+#table-rad th:nth-child(1), #table-rad td:nth-child(1) { width: 125px; min-width: 120px; } /* Norte / Latitud */
+#table-rad th:nth-child(2), #table-rad td:nth-child(2) { width: 125px; min-width: 120px; } /* Este / Longitud */
+#table-rad th:nth-child(3), #table-rad td:nth-child(3) { width: 75px; min-width: 70px; }   /* Ángulo */
+#table-rad th:nth-child(4), #table-rad td:nth-child(4) { width: 75px; min-width: 70px; }   /* Distancia */
+#table-rad th:nth-child(5), #table-rad td:nth-child(5) { width: 125px; min-width: 110px; } /* Etiqueta / Patrón */
+#table-rad th:nth-child(6), #table-rad td:nth-child(6) { width: 45px; min-width: 42px; text-align: center; } /* Color */
+#table-rad th:nth-child(7), #table-rad td:nth-child(7) { width: 45px; min-width: 40px; text-align: center; } /* Acción */
+
+/* Ancho optimizado para la tabla de Localización */
+#table-loc {
+  min-width: 460px;
+}
+#table-loc th:nth-child(1), #table-loc td:nth-child(1) { width: 125px; min-width: 120px; } /* Norte */
+#table-loc th:nth-child(2), #table-loc td:nth-child(2) { width: 125px; min-width: 120px; } /* Este */
 
 /* Map Panel */
 .map-viewport-container {
   flex: 1;
+  min-height: 0;
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 550px;
   background-color: #0f172a;
+  overflow: hidden;
 }
 
 #mapFrame {
   width: 100%;
   height: 100%;
-  min-height: 550px;
+  min-height: 0;
   border: none;
   display: block;
 }
@@ -671,11 +752,18 @@ body {
 
 /* Media Queries & Print */
 @media (max-width: 900px) {
+  html, body {
+    overflow: auto;
+    height: auto;
+    max-height: none;
+  }
   .main-layout {
     grid-template-columns: 1fr;
     height: auto;
+    overflow: visible;
   }
   .map-viewport-container {
-    height: 550px;
+    height: 520px;
+    min-height: 520px;
   }
 }
