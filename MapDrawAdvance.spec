@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_data_files
 
-datas = [('templates', 'templates'), ('static', 'static'), ('escala-color.jpg', '.'), ('portada.jpg', '.'), ('icons', 'icons'), ('data.xls', '.')]
+datas = [('templates', 'templates'), ('static', 'static'), ('escala-color.jpg', '.'), ('portada.jpg', '.'), ('icons', 'icons'), ('projects', 'projects'), ('data.xls', '.')]
 datas += collect_data_files('folium')
 datas += collect_data_files('branca')
 

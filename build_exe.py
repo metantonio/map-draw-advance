@@ -8,6 +8,13 @@ def build():
     print("=======================================================")
 
     python_exe = sys.executable
+    venv_python = os.path.abspath(os.path.join(".venv", "Scripts", "python.exe"))
+    if os.path.exists(venv_python):
+        try:
+            import PyInstaller
+        except ImportError:
+            python_exe = venv_python
+
     print(f"Usando interprete Python: {python_exe}")
 
     datas = []
