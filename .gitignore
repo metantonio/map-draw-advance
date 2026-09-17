@@ -20,3 +20,8 @@ __pycache__/
 .venv/
 .env
 *.pyc
+
+# Projects data
+projects/*
+!projects/.gitkeep
+!projects/Proyecto_Ejemplo.xls

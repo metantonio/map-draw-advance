@@ -21,6 +21,8 @@ def build():
         datas.append(("portada.jpg", "."))
     if os.path.exists("icons"):
         datas.append(("icons", "icons"))
+    if os.path.exists("projects"):
+        datas.append(("projects", "projects"))
     if os.path.exists("data.xls"):
         datas.append(("data.xls", "."))
     if os.path.exists("data.xlsx"):

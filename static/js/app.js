@@ -6,6 +6,7 @@ let currentData = {
   radiacion: []
 };
 
+let currentProject = ''; // Nombre del proyecto activo, o '' si es un proyecto nuevo
 let autoUpdateTimer = null;
 let loadingSafetyTimeout = null;
 
@@ -30,26 +31,234 @@ function initTabs() {
   });
 }
 
-// Cargar Datos Iniciales desde Servidor y Auto-Generar Mapa
+// ----------------------------------------------------
+// Gestión de Proyectos Guardados (Biblioteca de Proyectos)
+// ----------------------------------------------------
+async function fetchProjectsList(selectProject = null) {
+  try {
+    const res = await fetch('/api/projects');
+    const json = await res.json();
+    if (json.status === 'ok' && json.projects) {
+      renderProjectOptions(json.projects, selectProject);
+    }
+  } catch (err) {
+    console.warn('Error al cargar la lista de proyectos:', err);
+  }
+}
+
+function renderProjectOptions(projects, selectProject = null) {
+  const select = document.getElementById('projectSelect');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">-- Nuevo Proyecto (Limpio) --</option>';
+  projects.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.name;
+    opt.textContent = `📁 ${p.name} (${p.mtime})`;
+    select.appendChild(opt);
+  });
+
+  if (selectProject !== null) {
+    select.value = selectProject;
+    currentProject = selectProject;
+  } else if (currentProject) {
+    select.value = currentProject;
+  }
+  updateProjectDeleteButtonVisibility();
+}
+
+function updateProjectDeleteButtonVisibility() {
+  const btnDel = document.getElementById('btnDeleteProject');
+  const select = document.getElementById('projectSelect');
+  if (btnDel && select) {
+    btnDel.style.display = select.value ? 'inline-flex' : 'none';
+  }
+}
+
+async function loadProject(projectName) {
+  if (!projectName) {
+    // Modo Proyecto Nuevo y Limpio (sin precarga)
+    currentProject = '';
+    currentData = {
+      localizacion: [],
+      linea: [],
+      circulo: [],
+      radiacion: []
+    };
+    renderAllTables();
+    await generateMap(false);
+    updateProjectDeleteButtonVisibility();
+    return;
+  }
+
+  showLoading(true);
+  try {
+    const res = await fetch(`/api/projects/${encodeURIComponent(projectName)}`);
+    const json = await res.json();
+    if (json.status === 'ok' && json.data) {
+      currentProject = projectName;
+      currentData = json.data;
+      renderAllTables();
+      await generateMap(false);
+    } else {
+      alert('⚠️ Error al cargar el proyecto: ' + (json.message || 'No se encontró'));
+    }
+  } catch (err) {
+    alert('❌ Error al cargar el proyecto: ' + err);
+  } finally {
+    showLoading(false);
+    updateProjectDeleteButtonVisibility();
+  }
+}
+
+async function saveCurrentProject(name) {
+  if (!name || name.trim() === '') {
+    alert('Por favor especifique un nombre para el proyecto.');
+    return;
+  }
+  collectCurrentDataFromDOM();
+  showLoading(true);
+  try {
+    const res = await fetch('/api/projects/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_name: name.trim(),
+        ...currentData
+      })
+    });
+    const json = await res.json();
+    if (json.status === 'ok') {
+      currentProject = json.project_name;
+      renderProjectOptions(json.projects, currentProject);
+      const modal = document.getElementById('saveProjectModal');
+      if (modal) modal.style.display = 'none';
+    } else {
+      alert('⚠️ Error al guardar: ' + json.message);
+    }
+  } catch (err) {
+    alert('❌ Error de comunicación al guardar proyecto: ' + err);
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function deleteProject(projectName) {
+  if (!projectName) return;
+  if (!confirm(`¿Está seguro de eliminar el proyecto "${projectName}" de la biblioteca?`)) {
+    return;
+  }
+  showLoading(true);
+  try {
+    const res = await fetch(`/api/projects/${encodeURIComponent(projectName)}`, {
+      method: 'DELETE'
+    });
+    const json = await res.json();
+    if (json.status === 'ok') {
+      currentProject = '';
+      renderProjectOptions(json.projects, '');
+      currentData = { localizacion: [], linea: [], circulo: [], radiacion: [] };
+      renderAllTables();
+      generateMap(true);
+    } else {
+      alert('⚠️ No se pudo eliminar: ' + json.message);
+    }
+  } catch (err) {
+    alert('❌ Error al eliminar proyecto: ' + err);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// Cargar Datos Iniciales (Arranque limpio: sin precargar tablas, cargando biblioteca de proyectos)
 async function loadInitialData() {
   try {
-    const res = await fetch('/api/load-data');
-    const json = await res.json();
+    // 1. Obtener la lista de proyectos disponibles
+    await fetchProjectsList();
 
-    if (json.status === 'ok' && json.data) {
-      currentData = json.data;
-    }
+    // 2. Iniciar sesión limpia (0 filas)
+    currentProject = '';
+    currentData = {
+      localizacion: [],
+      linea: [],
+      circulo: [],
+      radiacion: []
+    };
     renderAllTables();
     
-    // Auto-generar mapa en el primer inicio
+    // Auto-generar mapa limpio en el primer inicio
     generateMap(true);
   } catch (err) {
-    console.warn('No se pudieron cargar los datos iniciales:', err);
+    console.warn('No se pudieron inicializar los datos:', err);
   }
 }
 
 // Eventos de Botones e Inputs
 function bindEvents() {
+  // Selector de Proyectos Guardados
+  const projectSelect = document.getElementById('projectSelect');
+  if (projectSelect) {
+    projectSelect.addEventListener('change', (e) => {
+      loadProject(e.target.value);
+    });
+  }
+
+  // Botón Nuevo Proyecto
+  const btnNewProject = document.getElementById('btnNewProject');
+  if (btnNewProject) {
+    btnNewProject.addEventListener('click', () => {
+      if (projectSelect) projectSelect.value = '';
+      loadProject('');
+    });
+  }
+
+  // Botón Abrir Modal Guardar Proyecto
+  const btnSaveProject = document.getElementById('btnSaveProject');
+  const saveModal = document.getElementById('saveProjectModal');
+  const txtProjectName = document.getElementById('txtProjectName');
+  if (btnSaveProject && saveModal) {
+    btnSaveProject.addEventListener('click', () => {
+      if (txtProjectName) {
+        if (currentProject) {
+          txtProjectName.value = currentProject.replace(/\.(xlsx|xls)$/i, '');
+        } else {
+          const now = new Date();
+          const pad = n => n.toString().padStart(2, '0');
+          txtProjectName.value = `Proyecto_${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+        }
+      }
+      saveModal.style.display = 'flex';
+      if (txtProjectName) txtProjectName.focus();
+    });
+  }
+
+  const btnCloseSaveProject = document.getElementById('btnCloseSaveProject');
+  if (btnCloseSaveProject && saveModal) {
+    btnCloseSaveProject.addEventListener('click', () => saveModal.style.display = 'none');
+  }
+
+  const btnCancelSaveProject = document.getElementById('btnCancelSaveProject');
+  if (btnCancelSaveProject && saveModal) {
+    btnCancelSaveProject.addEventListener('click', () => saveModal.style.display = 'none');
+  }
+
+  const btnConfirmSaveProject = document.getElementById('btnConfirmSaveProject');
+  if (btnConfirmSaveProject && txtProjectName) {
+    btnConfirmSaveProject.addEventListener('click', () => {
+      saveCurrentProject(txtProjectName.value);
+    });
+  }
+
+  // Botón Eliminar Proyecto
+  const btnDeleteProject = document.getElementById('btnDeleteProject');
+  if (btnDeleteProject) {
+    btnDeleteProject.addEventListener('click', () => {
+      if (projectSelect && projectSelect.value) {
+        deleteProject(projectSelect.value);
+      }
+    });
+  }
+
   // Subir Excel
   document.getElementById('btnUploadExcel').addEventListener('click', () => {
     document.getElementById('excelFileInput').click();
@@ -74,11 +283,17 @@ function bindEvents() {
       const json = await res.json();
       if (json.status === 'ok' && json.data) {
         currentData = json.data;
+        currentProject = json.project_name || file.name;
         renderAllTables();
         reloadMapFrame(json.map_url);
+        if (json.projects) {
+          renderProjectOptions(json.projects, currentProject);
+        } else {
+          fetchProjectsList(currentProject);
+        }
       } else {
         showLoading(false);
-        alert('⚠️ Error al leer Excel: ' + (json.message || 'Formato no válido'));
+        alert('⚠️ Error al procesar Excel: ' + (json.message || 'Formato no válido'));
       }
     } catch (err) {
       showLoading(false);

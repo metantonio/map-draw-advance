@@ -212,6 +212,63 @@ body {
   gap: 8px;
 }
 
+/* Project Management Toolbar */
+.project-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background-color: rgba(15, 23, 42, 0.6);
+  border-bottom: 1px solid var(--border-color);
+  gap: 8px;
+}
+
+.project-select-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.project-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.project-label i {
+  color: var(--accent-blue);
+}
+
+.project-dropdown {
+  flex: 1;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+  height: 30px;
+  text-overflow: ellipsis;
+  max-width: 230px;
+}
+
+.project-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-outline-danger {
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+.btn-outline-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
 /* Tabs */
 .tabs-header {
   display: flex;
