@@ -11,11 +11,11 @@ let autoUpdateTimer = null;
 let loadingSafetyTimeout = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-  initTabs();
-  loadInitialData();
-  bindEvents();
-  initCADFeatures();
-  initAIAssistant();
+  try { initTabs(); } catch (e) { console.error('Error initTabs:', e); }
+  try { loadInitialData(); } catch (e) { console.error('Error loadInitialData:', e); }
+  try { bindEvents(); } catch (e) { console.error('Error bindEvents:', e); }
+  try { initCADFeatures(); } catch (e) { console.error('Error initCADFeatures:', e); }
+  try { initAIAssistant(); } catch (e) { console.error('Error initAIAssistant:', e); }
 });
 
 // Inicializar Pestañas del Editor
@@ -506,9 +506,12 @@ function bindEvents() {
   });
 
   // Ocultar overlay al terminar de cargar el iFrame
-  iframe.addEventListener('load', () => {
-    showLoading(false);
-  });
+  const mapFrameEl = document.getElementById('mapFrame');
+  if (mapFrameEl) {
+    mapFrameEl.addEventListener('load', () => {
+      showLoading(false);
+    });
+  }
 
   // Ajustar tamaño del mapa Leaflet al redimensionar la ventana para garantizar 100% de pantalla visible
   let resizeTimer = null;
@@ -516,8 +519,9 @@ function bindEvents() {
     if (resizeTimer) clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       try {
-        if (iframe && iframe.contentWindow && typeof iframe.contentWindow.fixLeafletMapSize === 'function') {
-          iframe.contentWindow.fixLeafletMapSize();
+        const frame = document.getElementById('mapFrame');
+        if (frame && frame.contentWindow && typeof frame.contentWindow.fixLeafletMapSize === 'function') {
+          frame.contentWindow.fixLeafletMapSize();
         }
       } catch (e) {}
     }, 150);

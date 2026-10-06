@@ -2,6 +2,7 @@
 .*
 MapaCurvas.html
 *.html
+!templates/*.html
 
 # Track .env example
 !.env.example
