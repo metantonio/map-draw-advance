@@ -1,6 +1,7 @@
 import os
 import sys
 import math
+import re
 import numpy as np
 import pandas as pd
 import folium
@@ -296,7 +297,9 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
         found_key = None
         for pkey, pval in patrones_dict.items():
             same_center = (abs(pval['centro'][0] - n_c) < 0.0001 and abs(pval['centro'][1] - e_c) < 0.0001)
-            same_label = (pval['raw_etiqueta'] == etiq) if etiq else True
+            base_p = re.sub(r'_\d+$', '', pval['raw_etiqueta']).strip() if pval['raw_etiqueta'] else ''
+            base_e = re.sub(r'_\d+$', '', etiq).strip() if etiq else ''
+            same_label = (pval['raw_etiqueta'] == etiq or (base_p and base_p == base_e)) if (etiq and pval['raw_etiqueta']) else True
             
             if same_center and same_label:
                 found_key = pkey
@@ -307,7 +310,8 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
         else:
             p_idx = len(patrones_dict) + 1
             key = f"patron_{p_idx}"
-            display_label = etiq if etiq else f"Patrón {p_idx}"
+            clean_etiq = re.sub(r'_\d+$', '', etiq).strip() if etiq else ''
+            display_label = clean_etiq if clean_etiq else (etiq if etiq else f"Patrón {p_idx}")
             color = color_user if color_user else PALETA_PATRONES[(p_idx - 1) % len(PALETA_PATRONES)]
 
             patrones_dict[key] = {
@@ -447,7 +451,7 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
     fg_circulos = folium.FeatureGroup(name="⭕ Círculos")
     fg_perimetro = folium.FeatureGroup(name="🚩 Perímetro RF (Curva Suave)", show=True)
     fg_perimetro_marcadores = folium.FeatureGroup(name="📌 Vértices Perímetro RF (Marcadores)", show=show_perimeter_markers)
-    fg_heatmap = folium.FeatureGroup(name="🔥 Patrón de Radiación (Heatmap RF)")
+    fg_heatmap = folium.FeatureGroup(name="🔥 Patrón de Radiación (Heatmap RF)", show=False)
     grid_sys_lbl = "UTM (m)" if coord_system.lower() == "utm" else "WGS-84 (º)"
     fg_grilla = folium.FeatureGroup(name=f"🌐 Grilla {grid_sys_lbl}", show=True)
 
@@ -529,12 +533,28 @@ def build_folium_map(data_localizacion, data_linea, data_circulo, data_radiacion
         for pkey, p in patrones_dict.items():
             lat_c, lon_c = p['centro'][0], p['centro'][1]
             if abs(lat_c) > 0.0001 and abs(lon_c) > 0.0001 and len(p['angulos']) >= 1:
+                patron_color = p['color']
+
+                # Trazar los rayos individuales desde el centro transmisor
+                for i in range(len(p['angulos'])):
+                    a_ray = p['angulos'][i]
+                    d_ray = p['distancias'][i]
+                    tip_lat, tip_lon = distanceAndAngle(lat_c, lon_c, a_ray, d_ray)
+                    folium.PolyLine(
+                        [[lat_c, lon_c], [tip_lat, tip_lon]],
+                        color=patron_color,
+                        weight=2.0,
+                        opacity=0.75,
+                        dash_array='4, 4',
+                        popup=f"Radial #{i+1}<br>Azimut: {a_ray}º<br>Alcance: {d_ray} km",
+                        tooltip=f"Radial #{i+1}: {a_ray}º / {d_ray} km"
+                    ).add_to(fg_perimetro)
+
                 smooth_coords = smooth_radiation_perimeter(lat_c, lon_c, p['angulos'], p['distancias'])
                 for sc in smooth_coords:
                     all_coords.append(sc)
 
                 max_d = max(p['distancias']) if p['distancias'] else 0.0
-                patron_color = p['color']
 
                 folium.PolyLine(
                     smooth_coords,

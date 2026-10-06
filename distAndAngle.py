@@ -54,43 +54,57 @@ def rf_signal_decay(d_ratio):
 
 def smooth_radiation_perimeter(latitude, longitude, angulos, distancias, sub_points=12):
     """
-    Genera un perímetro de radiación con curvas suaves (spline polar cerrado)
+    Genera un perímetro de radiación con curvas suaves (spline polar).
     intercalando sub-puntos suaves entre cada par de azimuts consecutivos.
+    Si el conjunto de radiales cubre 360º (o casi todo el círculo >= 330º),
+    cierra el bucle polar completo. Si es un sector direccional (< 330º),
+    traza la curva suave a lo largo del arco de los radiales y cierra el sector
+    pasando por el centro transmisor.
     """
-    if not angulos or not distancias or len(angulos) < 2:
-        coords = []
-        for i in range(len(angulos)):
-            lat, lon = distanceAndAngle(latitude, longitude, angulos[i], distancias[i])
-            coords.append([lat, lon])
-        return coords
+    if not angulos or not distancias:
+        return []
+
+    if len(angulos) < 2:
+        coords = [distanceAndAngle(latitude, longitude, angulos[0], distancias[0])]
+        return [[latitude, longitude], coords[0], [latitude, longitude]]
 
     # Ordenar por ángulo
     pairs = sorted(zip(angulos, distancias), key=lambda x: x[0])
-    angs = [p[0] for p in pairs]
-    dists = [p[1] for p in pairs]
+    angs = [float(p[0]) for p in pairs]
+    dists = [float(p[1]) for p in pairs]
 
-    # Cerrar el bucle polar añadiendo 360 grados al primer ángulo
-    if angs[-1] < 360:
-        angs.append(angs[0] + 360.0)
-        dists.append(dists[0])
+    span = angs[-1] - angs[0]
+    # Determinar si es patrón omnidireccional 360º o un sector
+    is_full_circle = (span >= 330.0) or (len(angs) > 2 and (360.0 - span) <= (angs[1] - angs[0]) * 1.5)
+
+    if is_full_circle:
+        if angs[-1] < 360.0:
+            angs.append(angs[0] + 360.0)
+            dists.append(dists[0])
+        n_segs = len(angs) - 1
+    else:
+        n_segs = len(angs) - 1
 
     smooth_coords = []
 
     # Interpolación catmull-rom / spline cúbica polar suave
-    for i in range(len(angs) - 1):
+    for i in range(n_segs):
         a1, a2 = angs[i], angs[i+1]
         d1, d2 = dists[i], dists[i+1]
 
         # Puntos de control vecinos para pendiente suave
-        d0 = dists[i-1] if i > 0 else dists[-2]
-        d3 = dists[i+2] if (i+2) < len(dists) else dists[1]
+        if is_full_circle:
+            d0 = dists[i-1] if i > 0 else dists[-2]
+            d3 = dists[i+2] if (i+2) < len(dists) else dists[1]
+        else:
+            d0 = dists[i-1] if i > 0 else (2.0 * d1 - d2)
+            d3 = dists[i+2] if (i+2) < len(dists) else (2.0 * d2 - d1)
 
         for k in range(sub_points):
             t = k / float(sub_points)
-            # Interpolación cúbica Hermite/Catmull-Rom para distancia radial
             t2 = t * t
             t3 = t2 * t
-            
+
             # Funciones base de Hermite
             h00 = 2*t3 - 3*t2 + 1
             h10 = t3 - 2*t2 + t
@@ -100,19 +114,24 @@ def smooth_radiation_perimeter(latitude, longitude, angulos, distancias, sub_poi
             m0 = 0.5 * (d2 - d0)
             m1 = 0.5 * (d3 - d1)
 
-            d_interp = h00 * d1 + h10 * m0 + h01 * d2 + h11 * m1
-            d_interp = max(0.01, d_interp)
-
+            d_interp = max(0.01, h00 * d1 + h10 * m0 + h01 * d2 + h11 * m1)
             a_interp = a1 + t * (a2 - a1)
 
             lat_interp, lon_interp = distanceAndAngle(latitude, longitude, a_interp, d_interp)
             smooth_coords.append([lat_interp, lon_interp])
 
-    # Cerrar la polilínea repitiendo el primer punto
-    if smooth_coords:
-        smooth_coords.append(smooth_coords[0])
+    # Añadir el punto final exacto del arco
+    end_idx = n_segs if not is_full_circle else -1
+    lat_end, lon_end = distanceAndAngle(latitude, longitude, angs[end_idx], dists[end_idx])
+    smooth_coords.append([lat_end, lon_end])
 
-    return smooth_coords
+    if is_full_circle:
+        if smooth_coords:
+            smooth_coords.append(smooth_coords[0])
+        return smooth_coords
+    else:
+        # Cerrar el sector conectando con la estación central
+        return [[latitude, longitude]] + smooth_coords + [[latitude, longitude]]
 
 def distanceAndAngleInterpolation(latitude, longitude, angulo, distance, heat_user=None):
     """

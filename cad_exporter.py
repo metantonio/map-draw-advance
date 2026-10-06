@@ -178,9 +178,14 @@ def export_to_dxf(localizacion, linea, circulo, radiacion, coord_system='utm', o
                 msp.add_line((cx, cy, 0), (end_x, end_y, 0), dxfattribs={'layer': 'RADIALES', 'color': rad_color})
 
             # Polígono perimetral que envuelve los radiales
-            if len(perimeter_pts) >= 3:
-                perimeter_pts.append(perimeter_pts[0]) # Cerrar polígono
-                msp.add_lwpolyline(perimeter_pts, dxfattribs={'layer': 'RADIALES_PERIMETRO', 'color': 1})
+            if len(perimeter_pts) >= 2:
+                span = rays[-1][0] - rays[0][0]
+                is_full = (span >= 330.0) or (len(rays) > 2 and (360.0 - span) <= (rays[1][0] - rays[0][0]) * 1.5)
+                if is_full and len(perimeter_pts) >= 3:
+                    closed_poly = perimeter_pts + [perimeter_pts[0]]
+                else:
+                    closed_poly = [(cx, cy)] + perimeter_pts + [(cx, cy)]
+                msp.add_lwpolyline(closed_poly, dxfattribs={'layer': 'RADIALES_PERIMETRO', 'color': 1})
 
     doc.saveas(output_path)
     return output_path

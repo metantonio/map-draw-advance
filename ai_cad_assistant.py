@@ -262,8 +262,25 @@ def apply_actions_to_data(actions, current_data):
             radii = params.get('radii', [10.0])
             ang_start = float(params.get('angle_start', 0.0))
             ang_step = float(params.get('angle_step', 20.0))
-            label = params.get('label', 'Radial AI')
+            label = params.get('label', 'Nube Radial AI')
             color = params.get('color', 'red')
+
+            # Agregar estación en el centro a la capa de localización
+            station_name = f"Estación {label}" if label else "Estación Base"
+            already_exists = any(
+                abs(p.get('norte', 0.0) - c_lat) < 0.00001 and abs(p.get('este', 0.0) - c_lon) < 0.00001
+                for p in loc
+            )
+            if not already_exists:
+                loc.append({
+                    'norte': round(c_lat, 6),
+                    'este': round(c_lon, 6),
+                    'color': color if color in ['red', 'blue', 'green', 'purple', 'orange', 'darkred', 'cadetblue'] else 'red',
+                    'tipo': 'Default',
+                    'direccion': '',
+                    'sobrenombre': station_name
+                })
+                created_summary.append(f"estación central '{station_name}'")
 
             count_rays = 0
             for i, r in enumerate(radii):
@@ -275,7 +292,7 @@ def apply_actions_to_data(actions, current_data):
                         'este': round(c_lon, 6),
                         'angulo': round(cur_ang, 2),
                         'distancia': round(dist, 3),
-                        'etiqueta': f"{label}_{i+1}",
+                        'etiqueta': label,
                         'color': color
                     })
                     count_rays += 1
