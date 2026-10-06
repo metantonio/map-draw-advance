@@ -9,6 +9,8 @@ import pandas as pd
 
 from functions import find_excel_file
 from main import build_folium_map
+from cad_exporter import export_to_dxf, send_to_active_autocad
+from ai_cad_assistant import check_ollama_status, execute_ai_command
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
@@ -557,6 +559,72 @@ def api_download_template():
     if not os.path.exists(template_path):
         create_excel_template(template_path)
     return send_file(template_path, as_attachment=True, download_name='plantilla_data.xlsx')
+
+@app.route('/api/cad/export-dxf', methods=['POST'])
+def api_export_dxf():
+    try:
+        req = request.get_json(force=True) or {}
+        loc = req.get('localizacion', [])
+        lin = req.get('linea', [])
+        cir = req.get('circulo', [])
+        rad = req.get('radiacion', [])
+        coord_sys = str(req.get('coord_system', 'utm')).lower()
+        filename = req.get('filename', 'mapa_cad.dxf')
+        if not filename.lower().endswith('.dxf'):
+            filename += '.dxf'
+        
+        safe_fname = sanitize_filename(filename) if sanitize_filename else filename
+        if not safe_fname.lower().endswith('.dxf'):
+            safe_fname += '.dxf'
+        out_path = os.path.abspath(os.path.join(PROJECTS_DIR, safe_fname))
+        export_to_dxf(loc, lin, cir, rad, coord_system=coord_sys, output_path=out_path)
+        return send_file(out_path, as_attachment=True, download_name=safe_fname)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/cad/send-active', methods=['POST'])
+def api_cad_send_active():
+    try:
+        req = request.get_json(force=True) or {}
+        loc = req.get('localizacion', [])
+        lin = req.get('linea', [])
+        cir = req.get('circulo', [])
+        rad = req.get('radiacion', [])
+        coord_sys = str(req.get('coord_system', 'utm')).lower()
+        result = send_to_active_autocad(loc, lin, cir, rad, coord_system=coord_sys)
+        return jsonify(result)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/ollama/status', methods=['GET', 'POST'])
+def api_ollama_status():
+    api_url = request.args.get('url') or (request.get_json(silent=True) or {}).get('url') or "http://localhost:11434"
+    return jsonify(check_ollama_status(api_url))
+
+@app.route('/api/ai/command', methods=['POST'])
+def api_ai_command():
+    try:
+        req = request.get_json(force=True) or {}
+        prompt = req.get('prompt', '').strip()
+        if not prompt:
+            return jsonify({'status': 'error', 'message': 'El comando no puede estar vacío'}), 400
+        
+        current_data = req.get('data', {
+            'localizacion': [],
+            'linea': [],
+            'circulo': [],
+            'radiacion': []
+        })
+        model = req.get('model', 'qwen2.5-coder:7b')
+        api_url = req.get('api_url', 'http://localhost:11434')
+
+        result = execute_ai_command(prompt, current_data, model=model, api_url=api_url)
+        return jsonify(result)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 def open_browser():
     time.sleep(1.2)

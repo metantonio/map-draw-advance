@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   loadInitialData();
   bindEvents();
+  initCADFeatures();
+  initAIAssistant();
 });
 
 // Inicializar Pestañas del Editor
@@ -972,3 +974,383 @@ function exportMapPDF() {
     window.print();
   }
 }
+
+// ----------------------------------------------------
+// Exportación a AutoCAD y Open CAD (DXF y COM)
+// ----------------------------------------------------
+function initCADFeatures() {
+  const btnOpenCADModal = document.getElementById('btnOpenCADModal');
+  const cadModal = document.getElementById('cadModal');
+  const btnCloseCADModal = document.getElementById('btnCloseCADModal');
+  const btnConfirmExportDXF = document.getElementById('btnConfirmExportDXF');
+  const btnSendToActiveAutoCAD = document.getElementById('btnSendToActiveAutoCAD');
+
+  if (btnOpenCADModal && cadModal) {
+    btnOpenCADModal.addEventListener('click', () => {
+      // Sincronizar el sistema seleccionado con el selector principal
+      const mainSys = document.getElementById('coordSystemSelect');
+      const cadSys = document.getElementById('cad_coord_system');
+      if (mainSys && cadSys) {
+        cadSys.value = mainSys.value === 'utm' ? 'utm' : 'utm'; // por defecto métrico para CAD
+      }
+      // Sugerir nombre de archivo basado en el proyecto actual
+      const cadFilename = document.getElementById('cad_filename');
+      if (cadFilename) {
+        if (currentProject) {
+          cadFilename.value = currentProject.replace(/\.(xlsx|xls)$/i, '') + '.dxf';
+        } else {
+          cadFilename.value = `Plano_CAD_${new Date().toISOString().slice(0,10)}.dxf`;
+        }
+      }
+      cadModal.style.display = 'flex';
+    });
+  }
+
+  if (btnCloseCADModal && cadModal) {
+    btnCloseCADModal.addEventListener('click', () => cadModal.style.display = 'none');
+  }
+
+  if (cadModal) {
+    cadModal.addEventListener('click', (e) => {
+      if (e.target === cadModal) cadModal.style.display = 'none';
+    });
+  }
+
+  // Descargar Archivo DXF
+  if (btnConfirmExportDXF) {
+    btnConfirmExportDXF.addEventListener('click', async () => {
+      const coordSys = document.getElementById('cad_coord_system').value || 'utm';
+      const filename = document.getElementById('cad_filename').value.trim() || 'mapa_cad.dxf';
+      const data = collectCurrentDataFromDOM();
+
+      const origText = btnConfirmExportDXF.innerHTML;
+      btnConfirmExportDXF.disabled = true;
+      btnConfirmExportDXF.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando DXF...';
+
+      try {
+        const res = await fetch('/api/cad/export-dxf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            localizacion: data.localizacion,
+            linea: data.linea,
+            circulo: data.circulo,
+            radiacion: data.radiacion,
+            coord_system: coordSys,
+            filename: filename
+          })
+        });
+
+        if (res.ok) {
+          const blob = await res.blob();
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = filename.endsWith('.dxf') ? filename : filename + '.dxf';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(downloadUrl);
+          cadModal.style.display = 'none';
+        } else {
+          const errData = await res.json();
+          alert('⚠️ Error al generar DXF: ' + (errData.message || 'Error desconocido'));
+        }
+      } catch (err) {
+        alert('❌ Error de conexión al generar DXF: ' + err);
+      } finally {
+        btnConfirmExportDXF.disabled = false;
+        btnConfirmExportDXF.innerHTML = origText;
+      }
+    });
+  }
+
+  // Enviar directamente a AutoCAD activo vía COM
+  if (btnSendToActiveAutoCAD) {
+    btnSendToActiveAutoCAD.addEventListener('click', async () => {
+      const coordSys = document.getElementById('cad_coord_system').value || 'utm';
+      const data = collectCurrentDataFromDOM();
+
+      const origText = btnSendToActiveAutoCAD.innerHTML;
+      btnSendToActiveAutoCAD.disabled = true;
+      btnSendToActiveAutoCAD.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Conectando con AutoCAD...';
+
+      try {
+        const res = await fetch('/api/cad/send-active', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            localizacion: data.localizacion,
+            linea: data.linea,
+            circulo: data.circulo,
+            radiacion: data.radiacion,
+            coord_system: coordSys
+          })
+        });
+
+        const json = await res.json();
+        if (json.status === 'ok') {
+          alert('✅ ' + json.message);
+          cadModal.style.display = 'none';
+        } else {
+          alert('⚠️ ' + json.message);
+        }
+      } catch (err) {
+        alert('❌ Error al comunicarse con AutoCAD: ' + err);
+      } finally {
+        btnSendToActiveAutoCAD.disabled = false;
+        btnSendToActiveAutoCAD.innerHTML = origText;
+      }
+    });
+  }
+}
+
+// ----------------------------------------------------
+// Asistente Inteligente de CAD & Órdenes en Lenguaje Natural
+// ----------------------------------------------------
+function initAIAssistant() {
+  const btnToggleAIAssistant = document.getElementById('btnToggleAIAssistant');
+  const aiDrawer = document.getElementById('aiAssistantDrawer');
+  const btnCloseAIDrawer = document.getElementById('btnCloseAIDrawer');
+  const btnToggleAISettings = document.getElementById('btnToggleAISettings');
+  const aiSettingsPanel = document.getElementById('aiSettingsPanel');
+  const btnRefreshOllamaModels = document.getElementById('btnRefreshOllamaModels');
+  const btnSendAICommand = document.getElementById('btnSendAICommand');
+  const aiPromptInput = document.getElementById('aiPromptInput');
+  const aiChatFeed = document.getElementById('aiChatFeed');
+
+  if (btnToggleAIAssistant && aiDrawer) {
+    btnToggleAIAssistant.addEventListener('click', () => {
+      const isVisible = aiDrawer.style.display === 'flex';
+      aiDrawer.style.display = isVisible ? 'none' : 'flex';
+      if (!isVisible && aiPromptInput) aiPromptInput.focus();
+    });
+  }
+
+  if (btnCloseAIDrawer && aiDrawer) {
+    btnCloseAIDrawer.addEventListener('click', () => {
+      aiDrawer.style.display = 'none';
+    });
+  }
+
+  if (btnToggleAISettings && aiSettingsPanel) {
+    btnToggleAISettings.addEventListener('click', () => {
+      aiSettingsPanel.style.display = aiSettingsPanel.style.display === 'none' ? 'block' : 'none';
+    });
+  }
+
+  // Presets para alternar entre Ollama (11434) y llama.cpp (8080)
+  const btnPresetOllama = document.getElementById('btnPresetOllama');
+  const btnPresetLlamaCpp = document.getElementById('btnPresetLlamaCpp');
+  const urlInput = document.getElementById('aiOllamaUrl');
+
+  function updatePresetButtonsState(url) {
+    if (!btnPresetOllama || !btnPresetLlamaCpp) return;
+    if (url.includes('8080')) {
+      btnPresetLlamaCpp.classList.add('active-preset');
+      btnPresetOllama.classList.remove('active-preset');
+    } else {
+      btnPresetOllama.classList.add('active-preset');
+      btnPresetLlamaCpp.classList.remove('active-preset');
+    }
+  }
+
+  // Cargar URL previa guardada en localStorage si existe
+  const savedUrl = localStorage.getItem('mapdraw_llm_url');
+  if (savedUrl && urlInput) {
+    urlInput.value = savedUrl;
+    updatePresetButtonsState(savedUrl);
+  }
+
+  if (btnPresetOllama && urlInput) {
+    btnPresetOllama.addEventListener('click', () => {
+      urlInput.value = 'http://localhost:11434';
+      localStorage.setItem('mapdraw_llm_url', urlInput.value);
+      updatePresetButtonsState(urlInput.value);
+      checkLLMStatus();
+    });
+  }
+
+  if (btnPresetLlamaCpp && urlInput) {
+    btnPresetLlamaCpp.addEventListener('click', () => {
+      urlInput.value = 'http://localhost:8080';
+      localStorage.setItem('mapdraw_llm_url', urlInput.value);
+      updatePresetButtonsState(urlInput.value);
+      checkLLMStatus();
+    });
+  }
+
+  if (urlInput) {
+    urlInput.addEventListener('change', () => {
+      localStorage.setItem('mapdraw_llm_url', urlInput.value.trim());
+      updatePresetButtonsState(urlInput.value.trim());
+      checkLLMStatus();
+    });
+  }
+
+  // Verificar estado del servidor LLM (Ollama o llama.cpp) y listar modelos
+  async function checkLLMStatus() {
+    const apiUrl = urlInput ? urlInput.value.trim() : 'http://localhost:11434';
+    const dot = document.getElementById('ollamaStatusDot');
+    const text = document.getElementById('ollamaStatusText');
+    const modelSelect = document.getElementById('aiModelSelect');
+
+    try {
+      const res = await fetch(`/api/ollama/status?url=${encodeURIComponent(apiUrl)}`);
+      const json = await res.json();
+      if (json.online) {
+        if (dot) {
+          dot.className = 'status-dot dot-online';
+        }
+        const prov = json.provider || (apiUrl.includes('8080') ? 'llama.cpp' : 'Ollama');
+        if (text) {
+          text.textContent = `${prov} Conectado (${json.models.length} modelos)`;
+          text.style.color = '#10b981';
+        }
+        if (modelSelect && json.models && json.models.length > 0) {
+          const prevVal = modelSelect.value;
+          modelSelect.innerHTML = '';
+          json.models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            modelSelect.appendChild(opt);
+          });
+          if (json.models.includes(prevVal)) {
+            modelSelect.value = prevVal;
+          } else if (json.default_model && json.models.includes(json.default_model)) {
+            modelSelect.value = json.default_model;
+          }
+        }
+      } else {
+        if (dot) {
+          dot.className = 'status-dot dot-offline';
+        }
+        if (text) {
+          const prov = apiUrl.includes('8080') ? 'llama.cpp' : 'Ollama';
+          text.textContent = `${prov} Offline (Modo Local)`;
+          text.style.color = '#f59e0b';
+        }
+      }
+    } catch (e) {
+      if (dot) dot.className = 'status-dot dot-offline';
+      if (text) text.textContent = 'Servidor no detectado';
+    }
+  }
+
+  if (btnRefreshOllamaModels) {
+    btnRefreshOllamaModels.addEventListener('click', checkLLMStatus);
+  }
+
+  // Verificar al iniciar
+  checkLLMStatus();
+
+  // Chips de órdenes rápidas
+  document.querySelectorAll('.ai-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const prompt = chip.getAttribute('data-prompt');
+      if (prompt && aiPromptInput) {
+        aiPromptInput.value = prompt;
+        submitAICommand();
+      }
+    });
+  });
+
+  // Enviar comando con Enter (Shift+Enter para salto de línea)
+  if (aiPromptInput) {
+    aiPromptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitAICommand();
+      }
+    });
+  }
+
+  if (btnSendAICommand) {
+    btnSendAICommand.addEventListener('click', submitAICommand);
+  }
+
+  async function submitAICommand() {
+    if (!aiPromptInput) return;
+    const prompt = aiPromptInput.value.trim();
+    if (!prompt) return;
+
+    aiPromptInput.value = '';
+
+    // Agregar burbuja del usuario
+    appendChatMessage('user', escapeHtml(prompt));
+
+    // Burbuja de espera / procesamiento
+    const loadingId = 'ai-loading-' + Date.now();
+    appendChatMessage('ai', '<i class="fa-solid fa-spinner fa-spin"></i> Interpretando orden geométrica...', loadingId);
+
+    const modelSelect = document.getElementById('aiModelSelect');
+    const urlInput = document.getElementById('aiOllamaUrl');
+    const model = modelSelect ? modelSelect.value : 'qwen2.5-coder:7b';
+    const apiUrl = urlInput ? urlInput.value.trim() : 'http://localhost:11434';
+
+    try {
+      const current = collectCurrentDataFromDOM();
+      const res = await fetch('/api/ai/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: prompt,
+          data: current,
+          model: model,
+          api_url: apiUrl
+        })
+      });
+
+      const json = await res.json();
+      removeChatMessage(loadingId);
+
+      if (json.status === 'ok') {
+        let msgHtml = `<div>${escapeHtml(json.explanation)}</div>`;
+        if (json.summary && json.summary.length > 0) {
+          msgHtml += `<div style="margin-top:6px; font-size:0.78rem; color:#a7f3d0;"><i class="fa-solid fa-check"></i> <strong>Aplicado:</strong> ${json.summary.join(', ')}</div>`;
+        }
+        appendChatMessage('ai', msgHtml);
+
+        // Actualizar datos globales y tablas
+        if (json.data) {
+          currentData = json.data;
+          renderAllTables();
+          // Regenerar el mapa para ver los cambios de inmediato
+          generateMap(false);
+        }
+      } else {
+        appendChatMessage('ai', `⚠️ <strong>Aviso:</strong> ${escapeHtml(json.message || 'No se pudo procesar la orden.')}`);
+      }
+    } catch (err) {
+      removeChatMessage(loadingId);
+      appendChatMessage('ai', `❌ <strong>Error:</strong> No se pudo conectar con el servidor: ${err}`);
+    }
+  }
+
+  function appendChatMessage(sender, htmlContent, id = null) {
+    if (!aiChatFeed) return;
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `chat-msg msg-${sender}`;
+    if (id) msgDiv.id = id;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.innerHTML = htmlContent;
+
+    msgDiv.appendChild(bubble);
+    aiChatFeed.appendChild(msgDiv);
+    aiChatFeed.scrollTop = aiChatFeed.scrollHeight;
+  }
+
+  function removeChatMessage(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  function escapeHtml(text) {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return (text || '').replace(/[&<>"']/g, m => map[m]);
+  }
+}
+
