@@ -1288,13 +1288,14 @@ function initAIAssistant() {
   // Verificar al iniciar
   checkLLMStatus();
 
-  // Chips de órdenes rápidas
+  // Chips de órdenes rápidas: solo copiar al input para permitir editar o revisar antes de enviar
   document.querySelectorAll('.ai-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       const prompt = chip.getAttribute('data-prompt');
       if (prompt && aiPromptInput) {
         aiPromptInput.value = prompt;
-        submitAICommand();
+        aiPromptInput.focus();
+        aiPromptInput.setSelectionRange(aiPromptInput.value.length, aiPromptInput.value.length);
       }
     });
   });
