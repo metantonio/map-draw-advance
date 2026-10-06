@@ -1107,6 +1107,44 @@ function initCADFeatures() {
       }
     });
   }
+
+  const btnSendToOpenCAD = document.getElementById('btnSendToOpenCAD');
+  if (btnSendToOpenCAD) {
+    btnSendToOpenCAD.addEventListener('click', async () => {
+      const data = collectCurrentDataFromDOM();
+      const coordSys = document.getElementById('cad_coord_system') ? document.getElementById('cad_coord_system').value : 'utm';
+      const origText = btnSendToOpenCAD.innerHTML;
+      btnSendToOpenCAD.disabled = true;
+      btnSendToOpenCAD.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Conectando con Open CAD Studio...';
+
+      try {
+        const res = await fetch('/api/cad/send-opencad', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            localizacion: data.localizacion,
+            linea: data.linea,
+            circulo: data.circulo,
+            radiacion: data.radiacion,
+            coord_system: coordSys
+          })
+        });
+
+        const json = await res.json();
+        if (json.status === 'ok') {
+          alert('✅ ' + json.message);
+          cadModal.style.display = 'none';
+        } else {
+          alert('⚠️ ' + json.message);
+        }
+      } catch (err) {
+        alert('❌ Error al comunicarse con Open CAD Studio: ' + err);
+      } finally {
+        btnSendToOpenCAD.disabled = false;
+        btnSendToOpenCAD.innerHTML = origText;
+      }
+    });
+  }
 }
 
 // ----------------------------------------------------

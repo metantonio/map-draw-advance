@@ -9,7 +9,7 @@ import pandas as pd
 
 from functions import find_excel_file
 from main import build_folium_map
-from cad_exporter import export_to_dxf, send_to_active_autocad
+from cad_exporter import export_to_dxf, send_to_active_autocad, send_to_opencad_studio
 from ai_cad_assistant import check_ollama_status, execute_ai_command
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
@@ -593,6 +593,21 @@ def api_cad_send_active():
         rad = req.get('radiacion', [])
         coord_sys = str(req.get('coord_system', 'utm')).lower()
         result = send_to_active_autocad(loc, lin, cir, rad, coord_system=coord_sys)
+        return jsonify(result)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/cad/send-opencad', methods=['POST'])
+def api_cad_send_opencad():
+    try:
+        req = request.get_json(force=True) or {}
+        loc = req.get('localizacion', [])
+        lin = req.get('linea', [])
+        cir = req.get('circulo', [])
+        rad = req.get('radiacion', [])
+        coord_sys = str(req.get('coord_system', 'utm')).lower()
+        result = send_to_opencad_studio(loc, lin, cir, rad, coord_system=coord_sys)
         return jsonify(result)
     except Exception as e:
         traceback.print_exc()

@@ -7,6 +7,10 @@ y enviar directamente a una instancia activa de AutoCAD en Windows vía COM.
 
 import os
 import math
+import json
+import socket
+import shutil
+import subprocess
 import ezdxf
 from ezdxf import colors
 from eqa2utm import gms2utm
@@ -313,3 +317,75 @@ def send_to_active_autocad(localizacion, linea, circulo, radiacion, coord_system
         'message': f'¡Se han dibujado exitosamente {created_count} entidades en AutoCAD!',
         'count': created_count
     }
+
+def find_opencad_studio():
+    """Busca la ruta del ejecutable de Open CAD Studio en el sistema."""
+    candidates = [
+        r"C:\Program Files\Open CAD Studio\OpenCADStudio.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Programs\Open CAD Studio\OpenCADStudio.exe"),
+        os.path.expandvars(r"%ProgramFiles(x86)%\Open CAD Studio\OpenCADStudio.exe"),
+        os.path.expandvars(r"%ProgramFiles%\Open CAD Studio\OpenCADStudio.exe"),
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return shutil.which("OpenCADStudio") or shutil.which("OpenCADStudio.exe")
+
+def send_to_opencad_studio(localizacion, linea, circulo, radiacion, coord_system='utm', output_path='mapa_export.dxf'):
+    """
+    Exporta y abre directamente el dibujo en Open CAD Studio utilizando su API nativa.
+    1. Genera el archivo DXF estándar R2010 con todas las capas y geometrías.
+    2. Si hay un servidor de automatización Open CAD Studio activo (--serve --port 4242), envía la orden JSON por socket TCP.
+    3. Si no hay socket activo, utiliza el ejecutable de Open CAD Studio para transferir el dibujo a la instancia en ejecución
+       (OpenCAD Studio utiliza IPC nativo para insertar el dibujo como pestaña en el editor activo) o abrir una ventana nueva.
+    """
+    try:
+        dxf_abs_path = os.path.abspath(output_path)
+        export_to_dxf(localizacion, linea, circulo, radiacion, coord_system=coord_system, output_path=dxf_abs_path)
+
+        # 1. Probar conexión TCP con servidor de automatización (OpenCADStudio --serve --port 4242)
+        socket_sent = False
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(1.0)
+            s.connect(('127.0.0.1', 4242))
+            init_line = s.recv(1024).decode('utf-8', errors='ignore')
+            cmd_payload = json.dumps({'op': 'open', 'path': dxf_abs_path}) + '\n'
+            s.sendall(cmd_payload.encode('utf-8'))
+            resp = s.recv(4096).decode('utf-8', errors='ignore')
+            s.close()
+            socket_sent = True
+        except Exception:
+            socket_sent = False
+
+        if socket_sent:
+            return {
+                'status': 'ok',
+                'message': '¡Geometría transmitida en tiempo real al servidor de Open CAD Studio (TCP 4242)!',
+                'method': 'tcp_automation',
+                'path': dxf_abs_path
+            }
+
+        # 2. Conectar a través del ejecutable oficial
+        exe_path = find_opencad_studio()
+        if not exe_path:
+            return {
+                'status': 'error',
+                'message': 'No se detectó Open CAD Studio instalado en este equipo (buscado en C:\\Program Files\\Open CAD Studio\\OpenCADStudio.exe). Puedes usar la opción Descargar DXF para abrirlo en la versión web (opencadstudio.com).'
+            }
+
+        # Lanzar o transferir al editor activo (Open CAD Studio transfiere el archivo como pestaña a la instancia activa)
+        subprocess.Popen([exe_path, dxf_abs_path])
+
+        return {
+            'status': 'ok',
+            'message': '¡Dibujo enviado y abierto en Open CAD Studio con capas y coordenadas completas!',
+            'method': 'desktop_ipc',
+            'path': dxf_abs_path
+        }
+    except Exception as e:
+        return {
+            'status': 'error',
+            'message': f'Error comunicando con Open CAD Studio: {str(e)}'
+        }
+
