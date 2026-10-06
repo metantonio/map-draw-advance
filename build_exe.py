@@ -64,6 +64,13 @@ def build():
         "distAndAngle",
         "scaletemplate",
         "main",
+        "cad_exporter",
+        "ai_cad_assistant",
+        "ezdxf",
+        "requests",
+        "win32com",
+        "win32com.client",
+        "pythoncom",
     ]
 
     for imp in hidden_imports:
@@ -71,6 +78,7 @@ def build():
 
     cmd.extend(["--collect-data", "folium"])
     cmd.extend(["--collect-data", "branca"])
+    cmd.extend(["--collect-data", "ezdxf"])
 
     for src, dest in datas:
         cmd.extend(["--add-data", f"{src};{dest}"])

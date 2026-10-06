@@ -4,6 +4,7 @@ from PyInstaller.utils.hooks import collect_data_files
 datas = [('templates', 'templates'), ('static', 'static'), ('escala-color.jpg', '.'), ('portada.jpg', '.'), ('icons', 'icons'), ('projects', 'projects'), ('data.xls', '.')]
 datas += collect_data_files('folium')
 datas += collect_data_files('branca')
+datas += collect_data_files('ezdxf')
 
 
 a = Analysis(
@@ -11,7 +12,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=datas,
-    hiddenimports=['flask', 'werkzeug', 'jinja2', 'folium', 'folium.plugins', 'branca', 'branca.element', 'pandas', 'openpyxl', 'xlrd', 'pyproj', 'mpu', 'matplotlib', 'numpy', 'geocoder', 'functions', 'eqa2utm', 'distAndAngle', 'scaletemplate', 'main'],
+    hiddenimports=['flask', 'werkzeug', 'jinja2', 'folium', 'folium.plugins', 'branca', 'branca.element', 'pandas', 'openpyxl', 'xlrd', 'pyproj', 'mpu', 'matplotlib', 'numpy', 'geocoder', 'functions', 'eqa2utm', 'distAndAngle', 'scaletemplate', 'main', 'cad_exporter', 'ai_cad_assistant', 'ezdxf', 'requests', 'win32com', 'win32com.client', 'pythoncom'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
