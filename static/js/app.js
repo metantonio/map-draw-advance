@@ -655,6 +655,7 @@ function collectCurrentDataFromDOM() {
   };
 
   computeRadiationDefaults();
+  return currentData;
 }
 
 // Renderizar todas las tablas
@@ -1025,7 +1026,7 @@ function initCADFeatures() {
     btnConfirmExportDXF.addEventListener('click', async () => {
       const coordSys = document.getElementById('cad_coord_system').value || 'utm';
       const filename = document.getElementById('cad_filename').value.trim() || 'mapa_cad.dxf';
-      const data = collectCurrentDataFromDOM();
+      const data = collectCurrentDataFromDOM() || currentData || {};
 
       const origText = btnConfirmExportDXF.innerHTML;
       btnConfirmExportDXF.disabled = true;
@@ -1036,10 +1037,10 @@ function initCADFeatures() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            localizacion: data.localizacion,
-            linea: data.linea,
-            circulo: data.circulo,
-            radiacion: data.radiacion,
+            localizacion: data.localizacion || [],
+            linea: data.linea || [],
+            circulo: data.circulo || [],
+            radiacion: data.radiacion || [],
             coord_system: coordSys,
             filename: filename
           })
@@ -1073,7 +1074,7 @@ function initCADFeatures() {
   if (btnSendToActiveAutoCAD) {
     btnSendToActiveAutoCAD.addEventListener('click', async () => {
       const coordSys = document.getElementById('cad_coord_system').value || 'utm';
-      const data = collectCurrentDataFromDOM();
+      const data = collectCurrentDataFromDOM() || currentData || {};
 
       const origText = btnSendToActiveAutoCAD.innerHTML;
       btnSendToActiveAutoCAD.disabled = true;
@@ -1084,10 +1085,10 @@ function initCADFeatures() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            localizacion: data.localizacion,
-            linea: data.linea,
-            circulo: data.circulo,
-            radiacion: data.radiacion,
+            localizacion: data.localizacion || [],
+            linea: data.linea || [],
+            circulo: data.circulo || [],
+            radiacion: data.radiacion || [],
             coord_system: coordSys
           })
         });
@@ -1111,7 +1112,7 @@ function initCADFeatures() {
   const btnSendToOpenCAD = document.getElementById('btnSendToOpenCAD');
   if (btnSendToOpenCAD) {
     btnSendToOpenCAD.addEventListener('click', async () => {
-      const data = collectCurrentDataFromDOM();
+      const data = collectCurrentDataFromDOM() || currentData || {};
       const coordSys = document.getElementById('cad_coord_system') ? document.getElementById('cad_coord_system').value : 'utm';
       const origText = btnSendToOpenCAD.innerHTML;
       btnSendToOpenCAD.disabled = true;
@@ -1122,10 +1123,10 @@ function initCADFeatures() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            localizacion: data.localizacion,
-            linea: data.linea,
-            circulo: data.circulo,
-            radiacion: data.radiacion,
+            localizacion: data.localizacion || [],
+            linea: data.linea || [],
+            circulo: data.circulo || [],
+            radiacion: data.radiacion || [],
             coord_system: coordSys
           })
         });
@@ -1332,7 +1333,7 @@ function initAIAssistant() {
     const apiUrl = urlInput ? urlInput.value.trim() : 'http://localhost:11434';
 
     try {
-      const current = collectCurrentDataFromDOM();
+      const current = collectCurrentDataFromDOM() || currentData || {};
       const res = await fetch('/api/ai/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
