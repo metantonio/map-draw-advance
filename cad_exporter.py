@@ -68,6 +68,8 @@ def export_to_dxf(localizacion, linea, circulo, radiacion, coord_system='utm', o
         """Convierte coordenadas a (X, Y) para CAD según el sistema elegido."""
         if coord_system == 'utm':
             try:
+                if abs(lat) > 90 or abs(lon) > 180:
+                    return float(lon), float(lat)
                 n, e, _ = gms2utm(lat, lon)
                 return float(e), float(n)  # En CAD X=Este, Y=Norte
             except Exception:
@@ -236,6 +238,8 @@ def send_to_active_autocad(localizacion, linea, circulo, radiacion, coord_system
     def to_coords(lat, lon):
         if coord_system == 'utm':
             try:
+                if abs(lat) > 90 or abs(lon) > 180:
+                    return float(lon), float(lat)
                 n, e, _ = gms2utm(lat, lon)
                 return float(e), float(n)
             except Exception:

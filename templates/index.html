@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,6 +19,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
+
 <body>
 
   <!-- Top Header Navigation -->
@@ -67,7 +69,8 @@
         <i class="fa-solid fa-bolt"></i> Generar Mapa
       </button>
 
-      <button id="btnToggleAIAssistant" class="btn btn-outline ai-glow-btn" title="Asistente de Inteligencia Artificial para Diseño CAD (Ollama)">
+      <button id="btnToggleAIAssistant" class="btn btn-outline ai-glow-btn"
+        title="Asistente de Inteligencia Artificial para Diseño CAD (Ollama)">
         <i class="fa-solid fa-wand-magic-sparkles"></i> Asistente CAD IA
       </button>
 
@@ -85,7 +88,8 @@
       <div class="panel-header">
         <h2><i class="fa-solid fa-file-excel"></i> Coordenadas & Excel</h2>
         <div class="file-upload-box" style="display:flex; gap:6px; align-items:center;">
-          <a id="btnDownloadTemplate" href="/api/download-template" class="btn btn-sm btn-outline" download title="Descargar Plantilla Vacía de Excel">
+          <a id="btnDownloadTemplate" href="/api/download-template" class="btn btn-sm btn-outline" download
+            title="Descargar Plantilla Vacía de Excel">
             <i class="fa-solid fa-file-csv"></i> Plantilla Excel
           </a>
           <input type="file" id="excelFileInput" accept=".xls,.xlsx" hidden>
@@ -109,13 +113,15 @@
           </select>
         </div>
         <div class="project-actions">
-          <button id="btnNewProject" class="btn btn-xs btn-outline" title="Iniciar un nuevo proyecto limpio (vaciar tablas)">
+          <button id="btnNewProject" class="btn btn-xs btn-outline"
+            title="Iniciar un nuevo proyecto limpio (vaciar tablas)">
             <i class="fa-solid fa-plus"></i> Nuevo
           </button>
           <button id="btnSaveProject" class="btn btn-xs btn-accent" title="Guardar proyecto actual en la biblioteca">
             <i class="fa-solid fa-floppy-disk"></i> Guardar
           </button>
-          <button id="btnDeleteProject" class="btn btn-xs btn-danger-icon" title="Eliminar proyecto guardado seleccionado" style="display:none;">
+          <button id="btnDeleteProject" class="btn btn-xs btn-danger-icon"
+            title="Eliminar proyecto guardado seleccionado" style="display:none;">
             <i class="fa-solid fa-trash"></i>
           </button>
         </div>
@@ -140,7 +146,8 @@
       <!-- Tab Content 1: Localización -->
       <div id="tab-localizacion" class="tab-content active">
         <div class="table-actions">
-          <button class="btn btn-xs btn-success" onclick="addRow('table-loc')"><i class="fa-solid fa-plus"></i> Añadir Punto</button>
+          <button class="btn btn-xs btn-success" onclick="addRow('table-loc')"><i class="fa-solid fa-plus"></i> Añadir
+            Punto</button>
           <span class="info-text">Pestaña LOCALIZACION</span>
         </div>
         <div class="table-wrapper">
@@ -162,7 +169,8 @@
       <!-- Tab Content 2: Polilínea -->
       <div id="tab-linea" class="tab-content">
         <div class="table-actions">
-          <button class="btn btn-xs btn-success" onclick="addRow('table-lin')"><i class="fa-solid fa-plus"></i> Añadir Vértice</button>
+          <button class="btn btn-xs btn-success" onclick="addRow('table-lin')"><i class="fa-solid fa-plus"></i> Añadir
+            Vértice</button>
           <span class="info-text">Pestaña LINEA</span>
         </div>
         <div class="table-wrapper">
@@ -182,7 +190,8 @@
       <!-- Tab Content 3: Círculos -->
       <div id="tab-circulo" class="tab-content">
         <div class="table-actions">
-          <button class="btn btn-xs btn-success" onclick="addRow('table-cir')"><i class="fa-solid fa-plus"></i> Añadir Círculo</button>
+          <button class="btn btn-xs btn-success" onclick="addRow('table-cir')"><i class="fa-solid fa-plus"></i> Añadir
+            Círculo</button>
           <span class="info-text">Pestaña CIRCULO</span>
         </div>
         <div class="table-wrapper">
@@ -203,17 +212,21 @@
       <!-- Tab Content 4: Radiación P_ANG_DIST -->
       <div id="tab-radiacion" class="tab-content">
         <div class="table-actions">
-          <button class="btn btn-xs btn-success" onclick="addRow('table-rad')"><i class="fa-solid fa-plus"></i> Añadir Punto Radiación</button>
+          <button class="btn btn-xs btn-success" onclick="addRow('table-rad')"><i class="fa-solid fa-plus"></i> Añadir
+            Punto Radiación</button>
           <span class="info-text">Curva Suave RF (100% Centro ➔ 0% Perímetro)</span>
         </div>
         <div class="table-wrapper">
           <table id="table-rad" class="data-table">
             <thead>
               <tr>
-                <th title="Latitud Norte en grados decimales (ej: 10.488767)"><i class="fa-solid fa-arrows-up-down"></i> Norte (Lat º)</th>
-                <th title="Longitud Este en grados decimales (ej: -66.889464)"><i class="fa-solid fa-arrows-left-right"></i> Este (Lon º)</th>
+                <th title="Latitud Norte en grados decimales (ej: 10.488767)"><i class="fa-solid fa-arrows-up-down"></i>
+                  Norte (Lat º)</th>
+                <th title="Longitud Este en grados decimales (ej: -66.889464)"><i
+                    class="fa-solid fa-arrows-left-right"></i> Este (Lon º)</th>
                 <th title="Ángulo de giro en grados (0º a 360º)"><i class="fa-solid fa-compass"></i> Ángulo (º)</th>
-                <th title="Distancia de alcance en kilómetros"><i class="fa-solid fa-ruler-horizontal"></i> Dist (km)</th>
+                <th title="Distancia de alcance en kilómetros"><i class="fa-solid fa-ruler-horizontal"></i> Dist (km)
+                </th>
                 <th title="Nombre identificador del patrón de radiación"><i class="fa-solid fa-tag"></i> Etiqueta</th>
                 <th title="Color asignado al patrón" style="text-align:center;"><i class="fa-solid fa-palette"></i></th>
                 <th style="text-align:center;"><i class="fa-solid fa-trash-can"></i></th>
@@ -231,7 +244,8 @@
       <div class="panel-header">
         <h2><i class="fa-solid fa-map"></i> Mapa Interactivo en Vivo</h2>
         <div class="export-actions">
-          <a id="btnOpenNewWindow" href="/Mapa.html" target="_blank" class="btn btn-sm btn-outline" title="Abrir Mapa en Pestana Nueva Completa">
+          <a id="btnOpenNewWindow" href="/Mapa.html" target="_blank" class="btn btn-sm btn-outline"
+            title="Abrir Mapa en Pestana Nueva Completa">
             <i class="fa-solid fa-arrow-up-right-from-square"></i> Nueva Pestana
           </a>
           <button id="btnExportPNG" class="btn btn-sm btn-secondary" title="Exportar Mapa como Imagen PNG">
@@ -240,10 +254,12 @@
           <button id="btnExportPDF" class="btn btn-sm btn-secondary" title="Configurar Opciones y Exportar a PDF">
             <i class="fa-solid fa-file-pdf"></i> Exportar PDF
           </button>
-          <a id="btnDownloadUTM" href="/api/download-utm" class="btn btn-sm btn-accent" download title="Descargar Coordenadas Transformadas en Excel">
+          <a id="btnDownloadUTM" href="/api/download-utm" class="btn btn-sm btn-accent" download
+            title="Descargar Coordenadas Transformadas en Excel">
             <i class="fa-solid fa-file-excel"></i> Excel UTM
           </a>
-          <button id="btnOpenCADModal" class="btn btn-sm btn-cad" title="Exportar a AutoCAD y Open CAD (.dxf) o Dibujar en Vivo">
+          <button id="btnOpenCADModal" class="btn btn-sm btn-cad"
+            title="Exportar a AutoCAD y Open CAD (.dxf) o Dibujar en Vivo">
             <i class="fa-solid fa-cube"></i> Exportar CAD
           </button>
         </div>
@@ -251,9 +267,10 @@
 
       <!-- Map Viewport Container -->
       <div id="mapExportContainer" class="map-viewport-container">
-        
+
         <!-- Botón Flotante para Re-mostrar Menú Lateral -->
-        <button id="btnRestoreSidebar" class="sidebar-floating-toggle" style="display:none;" title="Mostrar Panel Lateral de Coordenadas">
+        <button id="btnRestoreSidebar" class="sidebar-floating-toggle" style="display:none;"
+          title="Mostrar Panel Lateral de Coordenadas">
           <i class="fa-solid fa-bars-staggered"></i> Mostrar Menú
         </button>
 
@@ -283,11 +300,13 @@
         <button id="btnCloseCajetin" class="close-btn">&times;</button>
       </div>
       <div class="modal-body" style="text-align: left; padding: 18px;">
-        
+
         <!-- Toggle para Cajetín Opcional -->
-        <label class="checkbox-label" style="margin-bottom: 16px; background: rgba(37,99,235,0.15); border-color: var(--accent-blue);">
+        <label class="checkbox-label"
+          style="margin-bottom: 16px; background: rgba(37,99,235,0.15); border-color: var(--accent-blue);">
           <input type="checkbox" id="chkIncludeCajetin" checked>
-          <span><i class="fa-solid fa-square-poll-vertical"></i> <strong>Incluir Cajetín Técnico de Plano en la Exportación</strong></span>
+          <span><i class="fa-solid fa-square-poll-vertical"></i> <strong>Incluir Cajetín Técnico de Plano en la
+              Exportación</strong></span>
         </label>
 
         <div id="cajetinFieldsGroup">
@@ -300,11 +319,13 @@
           </div>
           <div class="form-group">
             <label class="form-label">Título del Documento:</label>
-            <input type="text" id="caj_titulo" class="form-control-input" value="MAP DRAW ADVANCE v2.0 — PLANO GEOESPACIAL">
+            <input type="text" id="caj_titulo" class="form-control-input"
+              value="MAP DRAW ADVANCE v2.0 — PLANO GEOESPACIAL">
           </div>
           <div class="form-group">
             <label class="form-label">Nombre del Proyecto:</label>
-            <input type="text" id="caj_proyecto" class="form-control-input" value="Levantamiento de Coordenadas & Patrón de Radiación RF">
+            <input type="text" id="caj_proyecto" class="form-control-input"
+              value="Levantamiento de Coordenadas & Patrón de Radiación RF">
           </div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div class="form-group">
@@ -338,7 +359,8 @@
 
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;">
           <button id="btnCancelCajetin" class="btn btn-secondary">Cancelar</button>
-          <button id="btnConfirmPrintPDF" class="btn btn-primary"><i class="fa-solid fa-print"></i> Exportar a PDF</button>
+          <button id="btnConfirmPrintPDF" class="btn btn-primary"><i class="fa-solid fa-print"></i> Exportar a
+            PDF</button>
         </div>
       </div>
     </div>
@@ -360,7 +382,8 @@
         <p class="creator-tag">@metantonio</p>
         <hr class="divider">
         <p class="description-text">
-          Software libre para dibujado de coordenadas geoespaciales desde hojas Excel, cálculo de transformaciones UTM y análisis de curvas suaves de propagación electromagnética (RF).
+          Software libre para dibujado de coordenadas geoespaciales desde hojas Excel, cálculo de transformaciones UTM y
+          análisis de curvas suaves de propagación electromagnética (RF).
         </p>
         <a href="https://github.com/metantonio" target="_blank" class="btn btn-github">
           <i class="fa-brands fa-github"></i> Visitar Perfil en GitHub
@@ -401,7 +424,8 @@
       </div>
       <div class="modal-body" style="text-align: left; padding: 18px;">
         <div class="cad-info-badge">
-          <i class="fa-solid fa-circle-check text-success"></i> Formato estándar <strong>DXF R2010</strong> con capas organizadas:
+          <i class="fa-solid fa-circle-check text-success"></i> Formato estándar <strong>DXF R2010</strong> con capas
+          organizadas:
           <code>LOCALIZACION</code>, <code>PERIMETRO_LINEAS</code>, <code>CIRCULOS</code> y <code>RADIALES</code>.
         </div>
 
@@ -411,7 +435,8 @@
             <option value="utm" selected>UTM Métrico (X: Este m, Y: Norte m) — Recomendado para CAD</option>
             <option value="wgs84">WGS-84 Geográfico (X: Longitud º, Y: Latitud º)</option>
           </select>
-          <small class="info-text">En software CAD (AutoCAD, LibreCAD, QCAD, FreeCAD), las medidas reales se representan en metros con coordenadas métricas proyectadas UTM.</small>
+          <small class="info-text">En software CAD (AutoCAD, LibreCAD, QCAD, FreeCAD), las medidas reales se representan
+            en metros con coordenadas métricas proyectadas UTM.</small>
         </div>
 
         <div class="form-group">
@@ -423,10 +448,12 @@
           <button id="btnConfirmExportDXF" class="btn btn-primary" style="width: 100%; justify-content: center;">
             <i class="fa-solid fa-download"></i> Descargar DXF (AutoCAD & Open CAD)
           </button>
-          
-          <div style="text-align: center; color: var(--text-muted); font-size: 0.82rem; margin: 4px 0;">— O si tienes AutoCAD abierto en este equipo —</div>
 
-          <button id="btnSendToActiveAutoCAD" class="btn btn-outline" style="width: 100%; justify-content: center;" title="Dibuja directamente en el espacio de modelo activo vía COM Automation">
+          <div style="text-align: center; color: var(--text-muted); font-size: 0.82rem; margin: 4px 0;">— O si tienes
+            AutoCAD abierto en este equipo —</div>
+
+          <button id="btnSendToActiveAutoCAD" class="btn btn-outline" style="width: 100%; justify-content: center;"
+            title="Dibuja directamente en el espacio de modelo activo vía COM Automation">
             <i class="fa-solid fa-terminal"></i> Dibujar en AutoCAD Activo (COM Automation)
           </button>
         </div>
@@ -448,18 +475,22 @@
         </div>
       </div>
       <div class="ai-drawer-controls">
-        <button id="btnToggleAISettings" class="btn btn-icon-xs" title="Configurar Conexión Ollama"><i class="fa-solid fa-gear"></i></button>
-        <button id="btnCloseAIDrawer" class="btn btn-icon-xs" title="Cerrar Asistente"><i class="fa-solid fa-xmark"></i></button>
+        <button id="btnToggleAISettings" class="btn btn-icon-xs" title="Configurar Conexión Ollama"><i
+            class="fa-solid fa-gear"></i></button>
+        <button id="btnCloseAIDrawer" class="btn btn-icon-xs" title="Cerrar Asistente"><i
+            class="fa-solid fa-xmark"></i></button>
       </div>
     </div>
 
     <!-- Panel de Configuración de Ollama / llama.cpp (Colapsable) -->
     <div id="aiSettingsPanel" class="ai-settings-card" style="display:none;">
       <div class="provider-preset-row" style="display:flex; gap:6px; margin-bottom:8px;">
-        <button type="button" id="btnPresetOllama" class="btn btn-xs btn-outline active-preset" style="flex:1;" title="Usar Ollama en localhost:11434">
+        <button type="button" id="btnPresetOllama" class="btn btn-xs btn-outline active-preset" style="flex:1;"
+          title="Usar Ollama en localhost:11434">
           🦙 Ollama (11434)
         </button>
-        <button type="button" id="btnPresetLlamaCpp" class="btn btn-xs btn-outline" style="flex:1;" title="Usar llama.cpp en localhost:8080">
+        <button type="button" id="btnPresetLlamaCpp" class="btn btn-xs btn-outline" style="flex:1;"
+          title="Usar llama.cpp en localhost:8080">
           ⚡ llama.cpp (8080)
         </button>
       </div>
@@ -473,7 +504,8 @@
           <select id="aiModelSelect" class="form-control-input-xs form-select" style="flex: 1;">
             <option value="qwen2.5-coder:7b">qwen2.5-coder:7b</option>
           </select>
-          <button id="btnRefreshOllamaModels" class="btn btn-xs btn-outline" title="Actualizar Modelos de Ollama"><i class="fa-solid fa-rotate"></i></button>
+          <button id="btnRefreshOllamaModels" class="btn btn-xs btn-outline" title="Actualizar Modelos de Ollama"><i
+              class="fa-solid fa-rotate"></i></button>
         </div>
       </div>
     </div>
@@ -482,13 +514,16 @@
     <div id="aiChatFeed" class="ai-chat-feed">
       <div class="chat-msg msg-ai">
         <div class="msg-bubble">
-          👋 ¡Hola! Soy tu <strong>Asistente CAD Inteligente</strong>. Puedes darme órdenes en lenguaje natural para diseñar en el mapa y exportar a AutoCAD.
+          👋 ¡Hola! Soy tu <strong>Asistente CAD Inteligente</strong>. Puedes darme órdenes en lenguaje natural para
+          diseñar en el mapa y exportar a AutoCAD.
         </div>
       </div>
       <div class="ai-quick-chips">
         <span class="chip-title">Órdenes rápidas sugeridas:</span>
-        <button class="ai-chip" data-prompt="Dibuja una nube de radiales en (0, 0) con radios 10.5, 15, 20, 15.2, 10 y un incremento de 20 grados.">
-          🎯 Nube radiales (0, 0) paso 20º
+        <button class="ai-chip"
+          data-prompt="Dibuja una nube de radiales en (730000, 1160000) con radios en km de 10.5, 15, 20, 15.2, 10 y un incremento de 20 grados"
+          title="Dibuja una nube de radiales en (730000, 1160000) con radios en km de 10.5, 15, 20, 15.2, 10 y un incremento de 20 grados">
+          🎯 Nube radiales (730000, 1160000) paso 20º
         </button>
         <button class="ai-chip" data-prompt="Dibuja un círculo en (10.4887, -66.8894) con radio de 500 metros">
           ⭕ Círculo 500m
@@ -504,7 +539,8 @@
 
     <!-- Barra de Entrada de Comandos -->
     <div class="ai-input-bar">
-      <textarea id="aiPromptInput" class="ai-textarea" rows="2" placeholder="Escribe una orden (ej: Dibuja una nube de radiales en (0, 0)...)"></textarea>
+      <textarea id="aiPromptInput" class="ai-textarea" rows="2"
+        placeholder="Escribe una orden (ej: Dibuja una nube de radiales en (0, 0)...)"></textarea>
       <button id="btnSendAICommand" class="btn btn-primary ai-send-btn" title="Ejecutar Orden (Enter)">
         <i class="fa-solid fa-paper-plane"></i>
       </button>
@@ -513,4 +549,5 @@
 
   <script src="/static/js/app.js"></script>
 </body>
+
 </html>

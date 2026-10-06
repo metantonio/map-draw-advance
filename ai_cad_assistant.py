@@ -2,7 +2,7 @@
 ai_cad_assistant.py - Asistente de IA para Comandos en Lenguaje Natural
 Permite conectar con Ollama (y otros proveedores) o utilizar un motor de parsing
 estructurado para traducir órdenes como:
-"Dibuja una nube de radiales en (0, 0) con radios 10.5, 15, 20, 15.2, 10 y un incremento de 20 grados."
+"Dibuja una nube de radiales en (730000, 1160000) con radios en km de 10.5, 15, 20, 15.2, 10 y un incremento de 20 grados"
 a geometrías exactas en el mapa y plano CAD.
 """
 
@@ -29,7 +29,7 @@ DEBES responder EXCLUSIVAMENTE con un JSON válido (sin texto antes ni después)
 
 Parámetros admitidos por cada acción:
 1. "add_radiation_cloud":
-   - "center": [latitud, longitud] (por defecto [0.0, 0.0] si el usuario dice (0,0) o no indica centro)
+   - "center": [norte/y, este/x] o [latitud, longitud] (por defecto [0.0, 0.0]; admite UTM ej: [730000, 1160000] o grados ej: [10.488, -66.889])
    - "radii": [radio1, radio2, ...] (lista de números en km)
    - "angle_start": 0.0 (en grados, 0º a 360º)
    - "angle_step": 20.0 (incremento en grados entre cada radial)
@@ -117,7 +117,7 @@ def fallback_regex_parser(prompt, current_data):
     """
     Parser determinista de reserva (Rule-based NLP).
     Garantiza que órdenes directas como:
-    'Dibuja una nube de radiales en (0, 0) con radios 10.5, 15, 20, 15.2, 10 y un incremento de 20 grados.'
+    'Dibuja una nube de radiales en (730000, 1160000) con radios en km de 10.5, 15, 20, 15.2, 10 y un incremento de 20 grados'
     funcionen siempre, incluso si Ollama no está iniciado en ese instante.
     """
     text = prompt.strip().lower()
@@ -136,8 +136,8 @@ def fallback_regex_parser(prompt, current_data):
 
         # Extraer radios
         radii = []
-        # Buscar radios luego de "radios" o "radio"
-        radios_match = re.search(r'radios?\s*(?:de\s*)?([0-9\.,\s]+?)(?:y\s+un|con\s+un|incremento|grados|$)', text)
+        # Buscar radios luego de "radios" o "radio" (ej: "radios 10.5, 15", "radios en km de 10.5, 15, ...", "radios de 10.5, 15")
+        radios_match = re.search(r'radios?\s*(?:(?:en\s+(?:km|m|metros))?\s*(?:de)?)?\s*([0-9\.,\s]+?)(?:y\s+un|con\s+un|incremento|grados|$)', text)
         if radios_match:
             tokens = re.split(r'[,;\s]+', radios_match.group(1).strip())
             for t in tokens:
@@ -163,8 +163,11 @@ def fallback_regex_parser(prompt, current_data):
         if not radii:
             radii = [10.5, 15.0, 20.0, 15.2, 10.0]
 
+        c_display_0 = f"{int(center[0]) if center[0].is_integer() else center[0]}"
+        c_display_1 = f"{int(center[1]) if center[1].is_integer() else center[1]}"
+        step_display = f"{int(angle_step) if angle_step.is_integer() else angle_step}"
         return {
-            'explanation': f'Se generó una nube de {len(radii)} radiales centrada en ({center[0]}, {center[1]}) con paso angular de {angle_step}º.',
+            'explanation': f'Se generó una nube de {len(radii)} radiales centrada en ({c_display_0}, {c_display_1}) con paso angular de {step_display}º.',
             'actions': [{
                 'action': 'add_radiation_cloud',
                 'params': {
@@ -215,6 +218,27 @@ def fallback_regex_parser(prompt, current_data):
 
     return None
 
+def _normalize_center_coords(val1, val2):
+    """
+    Normaliza un par de coordenadas (val1, val2). Si se detecta que están
+    en formato métrico UTM (e.g. 730000, 1160000), las convierte a grados WGS84
+    para su correcta representación en el visor Folium y cálculos de azimut/distancia.
+    """
+    v1, v2 = float(val1), float(val2)
+    if abs(v1) > 90 or abs(v2) > 180:
+        try:
+            from eqa2utm import utm2gms
+            if v1 < v2:
+                este_m, norte_m = v1, v2
+            else:
+                norte_m, este_m = v1, v2
+            lat_conv, lon_conv = utm2gms(norte_m, este_m, huso=19)
+            if abs(lat_conv) <= 90 and abs(lon_conv) <= 180:
+                return lat_conv, lon_conv
+        except Exception:
+            pass
+    return v1, v2
+
 def apply_actions_to_data(actions, current_data):
     """
     Aplica la lista de acciones a las 4 capas de datos:
@@ -234,8 +258,7 @@ def apply_actions_to_data(actions, current_data):
 
         if act == 'add_radiation_cloud':
             center = params.get('center', [0.0, 0.0])
-            c_lat = float(center[0])
-            c_lon = float(center[1])
+            c_lat, c_lon = _normalize_center_coords(center[0], center[1])
             radii = params.get('radii', [10.0])
             ang_start = float(params.get('angle_start', 0.0))
             ang_step = float(params.get('angle_step', 20.0))
